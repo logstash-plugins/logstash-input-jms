@@ -1,0 +1,18 @@
+---
+# HornetQ Broker
+hornetq:
+  # Connect to a local HornetQ Broker using JNDI
+  :jndi_name: /ConnectionFactory
+  :jndi_context:
+    java.naming.factory.initial: org.jnp.interfaces.NamingContextFactory
+    java.naming.provider.url: jnp://localhost:1099
+    java.naming.factory.url.pkgs: org.jboss.naming:org.jnp.interfaces
+    java.naming.security.principal: guest
+    java.naming.security.credentials: guest
+  :require_jars:
+    - /Applications/hornetq-2.4.0.Final/lib/hornetq-commons.jar
+    - /Applications/hornetq-2.4.0.Final/lib/hornetq-core-client.jar
+    - /Applications/hornetq-2.4.0.Final/lib/hornetq-jms-client.jar
+    - /Applications/hornetq-2.4.0.Final/lib/jboss-jms-api.jar
+    - /Applications/hornetq-2.4.0.Final/lib/jnp-client.jar
+    - /Applications/hornetq-2.4.0.Final/lib/netty.jar

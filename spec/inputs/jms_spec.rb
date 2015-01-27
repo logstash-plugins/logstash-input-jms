@@ -1,25 +1,15 @@
 require "logstash/devutils/rspec/spec_helper"
+require "logstash/inputs/jms"
 require "jms"
+
+def getYamlPath()
+  return File.join(File.dirname(__FILE__),"jms.yml")
+end
 
 def populate(queue_name, content)
   require "logstash/event"
 
-  jms_config = {
-    :jndi_name => "/ConnectionFactory",
-    :jndi_context => {
-      'java.naming.factory.initial'=> 'org.jnp.interfaces.NamingContextFactory',
-      'java.naming.provider.url'=> 'jnp://localhost:1099',
-      'java.naming.factory.url.pkgs'=> 'org.jboss.naming:org.jnp.interfaces',
-      'java.naming.security.principal'=> 'guest',
-      'java.naming.security.credentials'=> 'guest'},
-    :require_jars => [
-      "/Applications/hornetq-2.4.0.Final/lib/hornetq-commons.jar",
-      "/Applications/hornetq-2.4.0.Final/lib/hornetq-core-client.jar",
-      "/Applications/hornetq-2.4.0.Final/lib/hornetq-jms-client.jar",
-      "/Applications/hornetq-2.4.0.Final/lib/jboss-jms-api.jar",
-      "/Applications/hornetq-2.4.0.Final/lib/jnp-client.jar",
-      "/Applications/hornetq-2.4.0.Final/lib/netty.jar"]
-  }
+  jms_config = YAML.load_file(getYamlPath())["hornetq"]
 
   JMS::Connection.session(jms_config) do |session|
     session.producer(:queue_name => queue_name) do |producer|
@@ -35,40 +25,48 @@ def process(pipeline, queue, content)
   pipeline.shutdown
 end # process
 
-describe "inputs/jms", :jms => true do
-
-
-  describe "read events from a queue" do
-    queue_name = "ExampleQueue"
-    content = "number " + (1000 + rand(50)).to_s
-    config <<-CONFIG
-    input {
-      jms {
-        jndi_name => "/ConnectionFactory"
-        jndi_context => {
-          "java.naming.factory.initial"=> "org.jnp.interfaces.NamingContextFactory"
-          "java.naming.provider.url"=> "jnp://localhost:1099"
-          "java.naming.factory.url.pkgs"=> "org.jboss.naming:org.jnp.interfaces"
-          "java.naming.security.principal"=> "guest"
-          "java.naming.security.credentials"=> "guest"
-        }
-        require_jars => [
-          "/Applications/hornetq-2.4.0.Final/lib/hornetq-commons.jar",
-          "/Applications/hornetq-2.4.0.Final/lib/hornetq-core-client.jar",
-          "/Applications/hornetq-2.4.0.Final/lib/hornetq-jms-client.jar",
-          "/Applications/hornetq-2.4.0.Final/lib/jboss-jms-api.jar",
-          "/Applications/hornetq-2.4.0.Final/lib/jnp-client.jar",
-          "/Applications/hornetq-2.4.0.Final/lib/netty.jar"
-        ]
-        destination => "#{queue_name}"
-      }
-    }
-    CONFIG
-
-    before(:each) { populate(queue_name, content) }
-
-    input { |pipeline, queue| process(pipeline, queue, content) }
+class LogStash::Inputs::TestJms < LogStash::Inputs::Jms
+  private
+  def queue_event(msg, output_queue)
+    super(msg, output_queue)
+    # need to raise exception here to stop the infinite loop
+    raise LogStash::ShutdownSignal
   end
+end
+
+describe "inputs/jms", :jms => true do
+  let (:jms_config) {{'yaml_file' => getYamlPath(), 'yaml_section' => 'hornetq', 'destination' => 'ExampleQueue'}}
+
+  it "should register" do
+    input = LogStash::Plugin.lookup("input", "jms").new(jms_config)
+    expect {input.register}.to_not raise_error
+    puts "finished \"should register\""
+  end
+
+  it 'should retrieve event from jms queue' do
+    populate("ExampleQueue", "TestMessage")
+
+    puts "finished populate"
+
+    jmsInput = LogStash::Inputs::TestJms.new(jms_config)
+    jmsInput.register
+
+    puts "registered"
+
+    logstash_queue = Queue.new
+    jmsInput.run logstash_queue
+    e = logstash_queue.pop
+    insist { e['message'] } == 'TestMessage'
+  end
+
+  # it "should read events from a queue" do
+  #   queue_name = "ExampleQueue"
+  #   content = "number " + (1000 + rand(50)).to_s
+
+  #   before(:each) { populate(queue_name, content) }
+
+  #   input { |pipeline, queue| process(pipeline, queue, content) }
+  # end
 
   # describe "read events from a list with batch_count=5" do
   #   key = 10.times.collect { rand(10).to_s }.join("")

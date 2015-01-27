@@ -22,7 +22,6 @@ require "logstash/namespace"
 #
 class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 	config_name "jms"
-	milestone 1
 
 	default :config, "plain"
 
@@ -197,11 +196,11 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 		JMS::Connection.session(@jms_config) do |session|
 			while(true)
 				if (@pub_sub)
-					session.consume(:topic_name => @descriptor, :timeout=>@timeout, :selector => @selector) do |message|
+					session.consume(:topic_name => @destination, :timeout=>@timeout, :selector => @selector) do |message|
 						queue_event message, output_queue
 					end
 				else
-					session.consume(:queue_name => @descriptor, :timeout=>@timeout, :selector => @selector) do |message|
+					session.consume(:queue_name => @destination, :timeout=>@timeout, :selector => @selector) do |message|
 						queue_event message, output_queue
 					end
 				end
@@ -287,7 +286,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
 	public
 	def run(output_queue)
-		case runner
+		case @runner
 			when "consumer" then
 					run_consumer(output_queue)
 			when "async" then
