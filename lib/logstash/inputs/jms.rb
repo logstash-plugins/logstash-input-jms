@@ -194,15 +194,10 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 	private
 	def run_consumer(output_queue)
 		JMS::Connection.session(@jms_config) do |session|
+			destination_key = @pub_sub ? :topic_name : :queue_name
 			while(true)
-				if (@pub_sub)
-					session.consume(:topic_name => @destination, :timeout=>@timeout, :selector => @selector) do |message|
-						queue_event message, output_queue
-					end
-				else
-					session.consume(:queue_name => @destination, :timeout=>@timeout, :selector => @selector) do |message|
-						queue_event message, output_queue
-					end
+				session.consume(destination_key => @destination, :timeout=>@timeout, :selector => @selector) do |message|
+					queue_event message, output_queue
 				end
 				sleep @interval
 			end
@@ -225,14 +220,10 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 		connection.on_exception do |jms_exception|
 			@logger.warn("JMS Exception has occurred: #{jms_exception}")
 		end
-		if (@pub_sub)
-			connection.on_message(:topic_name => @destination, :selector => @selector) do |message|
-				queue_event message, output_queue
-			end
-		else
-			connection.on_message(:queue_name => @destination, :selector => @selector) do |message|
-				queue_event message, output_queue
-			end
+
+		destination_key = @pub_sub ? :topic_name : :queue_name
+		connection.on_message(destination_key => @destination, :selector => @selector) do |message|
+			queue_event message, output_queue
 		end
 		connection.start
 		while(true)
@@ -260,14 +251,9 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 				raise jms_exception
 			end
 			# Define Asynchronous code block to be called every time a message is received
-			if (@pub_sub)
-				connection.on_message(:topic_name => @destination, :selector => @selector) do |message|
-					queue_event message, output_queue
-				end
-			else
-				connection.on_message(:queue_name => @destination, :selector => @selector) do |message|
-					queue_event message, output_queue
-				end
+			destination_key = @pub_sub ? :topic_name : :queue_name
+			connection.on_message(destination_key => @destination, :selector => @selector) do |message|
+				queue_event message, output_queue
 			end
 			# Since the on_message handler above is in a separate thread the thread needs
 			# to do some other work. It will just sleep for 10 seconds.

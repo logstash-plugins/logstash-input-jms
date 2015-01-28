@@ -40,49 +40,17 @@ describe "inputs/jms", :jms => true do
   it "should register" do
     input = LogStash::Plugin.lookup("input", "jms").new(jms_config)
     expect {input.register}.to_not raise_error
-    puts "finished \"should register\""
   end
 
   it 'should retrieve event from jms queue' do
     populate("ExampleQueue", "TestMessage")
 
-    puts "finished populate"
-
     jmsInput = LogStash::Inputs::TestJms.new(jms_config)
     jmsInput.register
-
-    puts "registered"
 
     logstash_queue = Queue.new
     jmsInput.run logstash_queue
     e = logstash_queue.pop
     insist { e['message'] } == 'TestMessage'
   end
-
-  # it "should read events from a queue" do
-  #   queue_name = "ExampleQueue"
-  #   content = "number " + (1000 + rand(50)).to_s
-
-  #   before(:each) { populate(queue_name, content) }
-
-  #   input { |pipeline, queue| process(pipeline, queue, content) }
-  # end
-
-  # describe "read events from a list with batch_count=5" do
-  #   key = 10.times.collect { rand(10).to_s }.join("")
-  #   event_count = 1000 + rand(50)
-  #   config <<-CONFIG
-  #   input {
-  #     redis {
-  #       type => "blah"
-  #       key => "#{key}"
-  #       data_type => "list"
-  #       batch_count => #{rand(20)+1}
-  #     }
-  #   }
-  #   CONFIG
-  #
-  #   before(:each) { populate(key, event_count) }
-  #   input { |pipeline, queue| process(pipeline, queue, event_count) }
-  # end
 end
