@@ -46,7 +46,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 	config :use_jms_timestamp, :validate => :boolean, :default => false
 
 	# Choose an implementation of the run block. Value can be either consumer, async or thread
-	config :runner, :validate => :string, :required => true, :default => "consumer"
+	config :runner, :validate => [ "consumer", "async", "thread" ], :default => "consumer"
 
 	# Set the selector to use to get messages off the queue or topic
 	config :selector, :validate => :string
@@ -60,11 +60,10 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 	config :interval, :validate => :number, :default => 10
 
 	# If pub-sub (topic) style should be used or not.
-	# Mandatory
 	config :pub_sub, :validate => :boolean, :default => false
+
 	# Name of the destination queue or topic to use.
-	# Mandatory
-	config :destination, :validate => :string
+	config :destination, :validate => :string, :required => true
 
 	# Yaml config file
 	config :yaml_file, :validate => :string
