@@ -23,8 +23,6 @@ require "logstash/namespace"
 class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 	config_name "jms"
 
-	default :config, "plain"
-
 	# A JMS message has three parts :
 	#	 Message Headers (required)
 	#	 Message Properties (optional)
@@ -52,9 +50,9 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 	config :selector, :validate => :string
 
 	# Initial connection timeout in seconds.
-	config :timeout, :validate => :number, :default => 1000
+	config :timeout, :validate => :number, :default => 60
 
-	# Polling interval.
+	# Polling interval in seconds.
 	# This is the time sleeping between asks to a consumed Queue.
 	# This parameter has non influence in the case of a subcribed Topic.
 	config :interval, :validate => :number, :default => 10
