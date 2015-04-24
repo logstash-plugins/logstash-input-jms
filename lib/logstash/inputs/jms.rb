@@ -34,10 +34,10 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # Include JMS Message Properties Field values in the event
   config :include_properties, :validate => :boolean, :default => true
   # Include JMS Message Body in the event
-  # Supports TextMessage and MapMessage
-  # If the JMS Message is a TextMessage, then the value will be in the "message" field of the event
+  # Supports TextMessage, MapMessage and ByteMessage
+  # If the JMS Message is a TextMessage or ByteMessage, then the value will be in the "message" field of the event
   # If the JMS Message is a MapMessage, then all the key/value pairs will be added in the Hashmap of the event
-  # BytesMessage, StreamMessage and ObjectMessage are not supported
+  # StreamMessage and ObjectMessage are not supported
   config :include_body, :validate => :boolean, :default => true
   # Convert the JMSTimestamp header field to the @timestamp value of the event
   # Don't use it for now, it is buggy
@@ -122,7 +122,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
         :password => @password,
         :broker_url => @broker_url,
         :url => @broker_url # "broker_url" is named "url" with Oracle AQ
-        }
+      }
     end
 
     @logger.debug("JMS Config being used", :context => @jms_config)
@@ -133,58 +133,48 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   private
   def queue_event(msg, output_queue)
     begin
-        event = LogStash::Event.new
-
-        # Here, we can use the JMS Enqueue timestamp as the @timestamp
-        if @use_jms_timestamp and msg.jms_timestamp
-          event.timestamp = ::Time.at(msg.jms_timestamp/1000)
-        end
-
-        if @include_header
-         #event.append(msg.attributes)
-          msg.attributes.each do |field, value|
-            event[field.to_s] = value
+      if @include_body
+        if msg.java_kind_of?(JMS::MapMessage)
+          event = LogStash::Event.new
+          msg.data.each do |field, value|
+            event[field.to_s] = value # TODO(claveau): needs codec.decode or converter.convert ?
           end
-        end
-
-        if @include_properties
-         #event.append(msg.properties)
-          msg.properties.each do |field, value|
-            event[field.to_s] = value
+        elsif msg.java_kind_of?(JMS::TextMessage) || msg.java_kind_of?(JMS::BytesMessage)
+          @codec.decode(msg.to_s) do |event_message|
+            event = event_message
           end
+        else
+          @logger.error( "Unknown data type #{msg.data.class.to_s} in Message" )
         end
+      end
 
-        if @include_body
-          if msg.java_kind_of?(JMS::MapMessage)
-           #event.append(msg.data)
-            msg.data.each do |field, value|
-              event[field.to_s] = value # TODO(claveau): needs codec.decode or converter.convert ?
-            end
+      event ||= LogStash::Event.new
 
-          elsif msg.java_kind_of?(JMS::TextMessage)
-            @codec.decode(msg.to_s) do |event_message|
-              # Copy out the header data into the message.
-              event.to_hash.each do |k,v|
-                event_message[k] = v
-              end
-              # Now lets overwrite the event.
-              event = event_message
-            end
-          else
-            @logger.error( "Unknown data type #{msg.data.class.to_s} in Message" )
-          end
+      # Here, we can use the JMS Enqueue timestamp as the @timestamp
+      if @use_jms_timestamp && msg.jms_timestamp
+        event.timestamp = ::Time.at(msg.jms_timestamp/1000)
+      end
+
+      if @include_header
+        msg.attributes.each do |field, value|
+          event[field.to_s] = value
         end
+      end
 
-        decorate(event)
-        output_queue << event
+      if @include_properties
+        msg.properties.each do |field, value|
+          event[field.to_s] = value
+        end
+      end
+
+      decorate(event)
+      output_queue << event
 
     rescue => e # parse or event creation error
       @logger.error("Failed to create event", :message => msg, :exception => e,
                     :backtrace => e.backtrace);
     end
   end
-
-
 
   # Consume all available messages on the queue
   # sleeps some time, then consume again
@@ -206,9 +196,6 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     sleep(10)
     retry
   end # def run
-
-
-
 
   # Consume all available messages on the queue through a listener
   private
@@ -270,12 +257,12 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   public
   def run(output_queue)
     case @runner
-      when "consumer" then
-          run_consumer(output_queue)
-      when "async" then
-          run_async(output_queue)
-      when "thread" then
-          run_thread(output_queue)
+    when "consumer" then
+      run_consumer(output_queue)
+    when "async" then
+      run_async(output_queue)
+    when "thread" then
+      run_thread(output_queue)
     end
   end # def run
 
