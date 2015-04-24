@@ -75,7 +75,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # JMS provider. By using this option it is not necessary
   # to put all the JMS Provider specific jar files into the
   # java CLASSPATH prior to starting Logstash.
-  config :required_jars, :validate => :array
+  config :require_jars, :validate => :array
 
   # Name of JMS Provider Factory class
   config :factory, :validate => :string
