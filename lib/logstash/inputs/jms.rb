@@ -12,6 +12,7 @@ require "logstash/namespace"
 #     include_header => false
 #     include_properties => false
 #     include_body => true
+#     treat_unknown_type_as_string => false
 #     use_jms_timestamp => false
 #     interval => 10
 #     queue_name => "myqueue"
@@ -39,8 +40,12 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # If the JMS Message is a MapMessage, then all the key/value pairs will be added in the Hashmap of the event
   # BytesMessage, StreamMessage and ObjectMessage are not supported
   config :include_body, :validate => :boolean, :default => true
+  
+  # If JMSType not specified and still want to treat message as text
+  # Usecase: WMQ Message with no type but text payload
+  config :treat_unknown_type_as_string, :validate => :boolean, :default => false
+  
   # Convert the JMSTimestamp header field to the @timestamp value of the event
-  # Don't use it for now, it is buggy
   config :use_jms_timestamp, :validate => :boolean, :default => false
 
   # Choose an implementation of the run block. Value can be either consumer, async or thread
@@ -137,7 +142,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
         # Here, we can use the JMS Enqueue timestamp as the @timestamp
         if @use_jms_timestamp and msg.jms_timestamp
-          event.timestamp = ::Time.at(msg.jms_timestamp/1000)
+          event.timestamp = LogStash::Timestamp.at(msg.jms_timestamp / 1000, (msg.jms_timestamp % 1000) * 1000)
+          #event.timestamp = ::Time.at(msg.jms_timestamp/1000)
         end
 
         if @include_header
@@ -170,8 +176,17 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
               # Now lets overwrite the event.
               event = event_message
             end
+          elsif @treat_unknown_type_as_string
+            @codec.decode(msg.to_s) do |event_message|
+              # Copy out the header data into the message.
+              event.to_hash.each do |k,v|
+                event_message[k] = v
+              end
+              # Now lets overwrite the event.
+              event = event_message
+            end
           else
-            @logger.error( "Unknown data type #{msg.data.class.to_s} in Message" )
+		        @logger.error( "Unknown data type #{msg.data.class.to_s} in Message" )
           end
         end
 
@@ -193,8 +208,13 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     JMS::Connection.session(@jms_config) do |session|
       destination_key = @pub_sub ? :topic_name : :queue_name
       while(true)
-        session.consume(destination_key => @destination, :timeout=>@timeout, :selector => @selector) do |message|
-          queue_event message, output_queue
+        #session.consume(destination_key => @destination, :timeout=>@timeout, :selector => @selector) do |message|
+        #  queue_event message, output_queue
+        #end
+        session.consumer(destination_key => @destination, :timeout => @timeout, :selector => @selector) do |consumer|
+			    while message = consumer.receive_no_wait
+				    queue_event message, output_queue
+			    end
         end
         sleep @interval
       end
