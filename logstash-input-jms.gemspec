@@ -27,7 +27,7 @@ Gem::Specification.new do |s|
 
   if RUBY_PLATFORM == 'java'
     s.platform = RUBY_PLATFORM
-    s.add_runtime_dependency "jruby-jms" #(Apache 2.0 license)
+    s.add_runtime_dependency "jruby-jms", ">= 1.2.0" #(Apache 2.0 license)
   end
   s.add_development_dependency 'logstash-devutils'
 end
