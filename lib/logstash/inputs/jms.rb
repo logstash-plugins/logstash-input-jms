@@ -39,8 +39,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # If the JMS Message is a MapMessage, then all the key/value pairs will be added in the Hashmap of the event
   # StreamMessage and ObjectMessage are not supported
   config :include_body, :validate => :boolean, :default => true
+  
   # Convert the JMSTimestamp header field to the @timestamp value of the event
-  # Don't use it for now, it is buggy
   config :use_jms_timestamp, :validate => :boolean, :default => false
 
   # Choose an implementation of the run block. Value can be either consumer, async or thread
@@ -152,7 +152,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
       # Here, we can use the JMS Enqueue timestamp as the @timestamp
       if @use_jms_timestamp && msg.jms_timestamp
-        event.timestamp = ::Time.at(msg.jms_timestamp/1000)
+        event.timestamp = LogStash::Timestamp.at(msg.jms_timestamp / 1000, (msg.jms_timestamp % 1000) * 1000)
       end
 
       if @include_header
