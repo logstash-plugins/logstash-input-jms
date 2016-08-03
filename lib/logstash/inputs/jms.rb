@@ -12,6 +12,7 @@ require "logstash/namespace"
 #     include_header => false
 #     include_properties => false
 #     include_body => true
+#     treat_unknown_type_as_string => false
 #     use_jms_timestamp => false
 #     interval => 10
 #     queue_name => "myqueue"
@@ -39,6 +40,11 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # If the JMS Message is a MapMessage, then all the key/value pairs will be added in the Hashmap of the event
   # StreamMessage and ObjectMessage are not supported
   config :include_body, :validate => :boolean, :default => true
+  
+  # If JMSType not specified and still want to treat message as text
+  # Usecase: WMQ Message with no type but text payload
+  config :treat_unknown_type_as_string, :validate => :boolean, :default => false
+ 
   # Convert the JMSTimestamp header field to the @timestamp value of the event
   # Don't use it for now, it is buggy
   config :use_jms_timestamp, :validate => :boolean, :default => false
@@ -139,7 +145,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
           msg.data.each do |field, value|
             event[field.to_s] = value # TODO(claveau): needs codec.decode or converter.convert ?
           end
-        elsif msg.java_kind_of?(JMS::TextMessage) || msg.java_kind_of?(JMS::BytesMessage)
+        elsif msg.java_kind_of?(JMS::TextMessage) || msg.java_kind_of?(JMS::BytesMessage) || @treat_unknown_type_as_string
           @codec.decode(msg.to_s) do |event_message|
             event = event_message
           end
@@ -152,7 +158,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
       # Here, we can use the JMS Enqueue timestamp as the @timestamp
       if @use_jms_timestamp && msg.jms_timestamp
-        event.timestamp = ::Time.at(msg.jms_timestamp/1000)
+        event.timestamp = LogStash::Timestamp.at(msg.jms_timestamp / 1000, (msg.jms_timestamp % 1000) * 1000)
       end
 
       if @include_header
