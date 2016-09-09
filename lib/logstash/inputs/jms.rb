@@ -157,13 +157,13 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
       if @include_header
         msg.attributes.each do |field, value|
-          event[field.to_s] = value
+          event.set(field.to_s, value)
         end
       end
 
       if @include_properties
         msg.properties.each do |field, value|
-          event[field.to_s] = value
+          event.set(field.to_s, value)
         end
       end
 

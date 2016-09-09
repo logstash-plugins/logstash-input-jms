@@ -1,3 +1,8 @@
+## 3.0.0
+  - Breaking: Updated plugin to use new Java Event APIs
+  - relax logstash-core-plugin-api constrains
+  - update .travis.yml
+
 # 2.0.4
   - Depend on logstash-core-plugin-api instead of logstash-core, removing the need to mass update plugins on major releases of logstash
 # 2.0.3
