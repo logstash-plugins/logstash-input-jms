@@ -141,8 +141,10 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
             event.set(field.to_s, value) # TODO(claveau): needs codec.decode or converter.convert ?
           end
         elsif msg.java_kind_of?(JMS::TextMessage) || msg.java_kind_of?(JMS::BytesMessage)
-          @codec.decode(msg.to_s) do |event_message|
-            event = event_message
+          if !msg.to_s.nil?
+            @codec.decode(msg.to_s) do |event_message|
+              event = event_message
+            end
           end
         else
           @logger.error( "Unknown data type #{msg.data.class.to_s} in Message" )
