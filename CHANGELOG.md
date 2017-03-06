@@ -1,5 +1,6 @@
 ## 3.0.1
  - support nil body
+ - fix dependency on semantic_logger (https://github.com/logstash-plugins/logstash-input-jms/issues/17)
 
 ## 3.0.0
  - Breaking: Updated plugin to use new Java Event APIs
