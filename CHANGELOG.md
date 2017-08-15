@@ -1,3 +1,6 @@
+## 3.0.3
+  - Fix some documentation issues
+
 ## 3.0.1
  - support nil body
  - fix dependency on semantic_logger (https://github.com/logstash-plugins/logstash-input-jms/issues/17)
