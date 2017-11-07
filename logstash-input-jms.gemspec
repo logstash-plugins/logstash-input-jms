@@ -1,9 +1,9 @@
 Gem::Specification.new do |s|
 
   s.name            = 'logstash-input-jms'
-  s.version         = '3.0.3'
+  s.version         = '3.0.4'
   s.licenses        = ['Apache License (2.0)']
-  s.summary         = "Pull events from a JMS topic or queue."
+  s.summary         = "Reads events from a Jms Broker"
   s.description     = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
   s.authors         = ["Elasticsearch"]
   s.email           = 'info@elasticsearch.com'
