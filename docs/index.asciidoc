@@ -1,5 +1,6 @@
 :plugin: jms
 :type: input
+:default_codec: plain
 
 ///////////////////////////////////////////
 START - GENERATED VARIABLES, DO NOT EDIT!
@@ -257,3 +258,5 @@ For some known examples, see: [Example jms.yml](https://github.com/reidmorrison/
 
 [id="plugins-{type}s-{plugin}-common-options"]
 include::{include_path}/{type}.asciidoc[]
+
+:default_codec!:
