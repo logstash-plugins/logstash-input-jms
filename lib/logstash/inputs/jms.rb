@@ -40,7 +40,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # If the JMS Message is a MapMessage, then all the key/value pairs will be added in the Hashmap of the event
   # StreamMessage and ObjectMessage are not supported
 
-  # Receive Oracle AQ buffered messages
+  # Receive Oracle AQ buffered messages. 
+  # In this mode persistent Oracle AQ JMS messages will not be recived.
   config :oracle_aq_buffered_messages, :validate => :boolean, :default => false
 
   config :include_body, :validate => :boolean, :default => true
