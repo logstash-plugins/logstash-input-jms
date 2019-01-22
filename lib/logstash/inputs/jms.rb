@@ -41,7 +41,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # StreamMessage and ObjectMessage are not supported
 
   # Receive Oracle AQ buffered messages. 
-  # In this mode persistent Oracle AQ JMS messages will not be recived.
+  # In this mode persistent Oracle AQ JMS messages will not be received.
   config :oracle_aq_buffered_messages, :validate => :boolean, :default => false
 
   config :include_body, :validate => :boolean, :default => true
