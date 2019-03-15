@@ -1,6 +1,7 @@
 # encoding: utf-8
 require "logstash/inputs/base"
 require "logstash/inputs/threadable"
+require 'java'
 require "logstash/namespace"
 
 # Read events from a Jms Broker. Supports both Jms Queues and Topics.
@@ -98,6 +99,14 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # contains details on how to connect to JNDI server
   config :jndi_context, :validate => :hash
 
+  config :system_properties, :validate => :hash
+
+  config :keystore, :validate => :path
+  config :keystore_password, :validate => :password
+  config :truststore, :validate => :path
+  config :truststore_password, :validate => :password
+
+
   # :yaml_file, :factory and :jndi_name are mutually exclusive, both cannot be supplied at the
   # same time. The priority order is :yaml_file, then :jndi_name, then :factory
   #
@@ -110,6 +119,12 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   def register
     require "jms"
     @connection = nil
+
+    load_ssl_properties
+
+    if @system_properties
+      load_system_properties(@system_properties)
+    end
 
     if @yaml_file
       @jms_config = YAML.load_file(@yaml_file)[@yaml_section]
@@ -135,6 +150,18 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
   end # def register
 
+  def load_ssl_properties
+    java.lang.System.setProperty("javax.net.ssl.keyStore", @keystore) if @keystore
+    java.lang.System.setProperty("javax.net.ssl.keyStorePassword", @keystore_password.value) if @keystore_password
+    java.lang.System.setProperty("javax.net.ssl.trustStore", @truststore) if @truststore
+    java.lang.System.setProperty("javax.net.ssl.trustStorePassword", @truststore_password.value) if @truststore_password
+  end
+
+  def load_system_properties(system_properties)
+    system_properties.each do |key,value|
+      java.lang.System.setProperty(key,value.to_s)
+    end
+  end
 
   private
   def queue_event(msg, output_queue)
