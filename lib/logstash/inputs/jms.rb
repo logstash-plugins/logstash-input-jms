@@ -123,32 +123,43 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     load_ssl_properties
 
     if @system_properties
-      load_system_properties(@system_properties)
+      load_system_properties
     end
 
-    if @yaml_file
-      @jms_config = YAML.load_file(@yaml_file)[@yaml_section]
+    @jms_config = jms_config
 
-    elsif @jndi_name
-      @jms_config = {
-        :require_jars => @require_jars,
-        :jndi_name => @jndi_name,
-        :jndi_context => @jndi_context}
+    @logger.debug("JMS Config being used", :context => @jms_config)
 
-    elsif @factory
-      @jms_config = {
+  end # def register
+
+  def jms_config
+    return jms_config_from_yaml(@yaml_file, @yaml_section) if @yaml_file
+    return jms_config_from_jndi if @jndi_name
+    jms_config_from_configuration
+  end
+
+  def jms_config_from_configuration
+    {
         :require_jars => @require_jars,
         :factory => @factory,
         :username => @username,
         :password => @password,
         :broker_url => @broker_url,
         :url => @broker_url # "broker_url" is named "url" with Oracle AQ
-      }
-    end
+    }
+  end
 
-    @logger.debug("JMS Config being used", :context => @jms_config)
+  def jms_config_from_jndi
+    {
+        :require_jars => @require_jars,
+        :jndi_name => @jndi_name,
+        :jndi_context => @jndi_context
+    }
+  end
 
-  end # def register
+  def jms_config_from_yaml(file, section)
+    YAML.load_file(file)[section]
+  end
 
   def load_ssl_properties
     java.lang.System.setProperty("javax.net.ssl.keyStore", @keystore) if @keystore
@@ -157,8 +168,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     java.lang.System.setProperty("javax.net.ssl.trustStorePassword", @truststore_password.value) if @truststore_password
   end
 
-  def load_system_properties(system_properties)
-    system_properties.each do |key,value|
+  def load_system_properties
+    @system_properties.each do |key,value|
       java.lang.System.setProperty(key,value.to_s)
     end
   end
