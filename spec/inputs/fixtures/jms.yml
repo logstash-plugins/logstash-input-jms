@@ -1,0 +1,16 @@
+---
+activemq:
+  :broker_url: tcp://localhost:61616
+  :pub_sub: true
+  :runner: consumer
+  :factory: org.apache.activemq.ActiveMQConnectionFactory
+  :require_jars:
+    - activemq-all.jar
+
+activemq_tls:
+  :broker_url: ssl://localhost:61617
+  :pub_sub: true
+  :runner: consumer
+  :factory: org.apache.activemq.ActiveMQConnectionFactory
+  :require_jars:
+    - activemq-all.jar
