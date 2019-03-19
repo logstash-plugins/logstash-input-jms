@@ -99,8 +99,6 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # contains details on how to connect to JNDI server
   config :jndi_context, :validate => :hash
 
-  config :system_properties, :validate => :hash
-
   config :keystore, :validate => :path
   config :keystore_password, :validate => :password
   config :truststore, :validate => :path
@@ -121,10 +119,6 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     @connection = nil
 
     load_ssl_properties
-
-    if @system_properties
-      load_system_properties
-    end
 
     @jms_config = jms_config
 
@@ -166,12 +160,6 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     java.lang.System.setProperty("javax.net.ssl.keyStorePassword", @keystore_password.value) if @keystore_password
     java.lang.System.setProperty("javax.net.ssl.trustStore", @truststore) if @truststore
     java.lang.System.setProperty("javax.net.ssl.trustStorePassword", @truststore_password.value) if @truststore_password
-  end
-
-  def load_system_properties
-    @system_properties.each do |key,value|
-      java.lang.System.setProperty(key,value.to_s)
-    end
   end
 
   private
