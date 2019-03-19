@@ -60,6 +60,8 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-interval>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-jndi_context>> |<<hash,hash>>|No
 | <<plugins-{type}s-{plugin}-jndi_name>> |<<string,string>>|No
+| <<plugins-{type}s-{plugin}-keystore>> |a valid filesystem path|No
+| <<plugins-{type}s-{plugin}-keystore_password>> |<<password,password>>|No
 | <<plugins-{type}s-{plugin}-oracle_aq_buffered_messages>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-password>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-pub_sub>> |<<boolean,boolean>>|No
@@ -68,6 +70,8 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-selector>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-threads>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-timeout>> |<<number,number>>|No
+| <<plugins-{type}s-{plugin}-truststore>> |a valid filesystem path|No
+| <<plugins-{type}s-{plugin}-truststore_password>> |<<password,password>>|No
 | <<plugins-{type}s-{plugin}-use_jms_timestamp>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-username>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-yaml_file>> |<<string,string>>|No
@@ -170,6 +174,23 @@ Contains details on how to connect to JNDI server.
 
 Name of JNDI entry at which the Factory can be found.
 
+[id="plugins-{type}s-{plugin}-keystore"]
+===== `keystore`
+
+  * Value type is <<path,path>>
+  * There is no default value for this setting.
+
+If you need to use a custom keystore (`.jks`) specify it here. This does not work with .pem keys
+
+[id="plugins-{type}s-{plugin}-keystore_password"]
+===== `keystore_password`
+
+  * Value type is <<password,password>>
+  * There is no default value for this setting.
+
+Specify the keystore password here.
+Note, most .jks files created with keytool require a password
+
 [id="plugins-{type}s-{plugin}-oracle_aq_buffered_messages"]
 ===== `oracle_aq_buffered_messages` 
 
@@ -244,6 +265,31 @@ Initial connection timeout in seconds.
   * Default value is `false`
 
 Convert the JMSTimestamp header field to the @timestamp value of the event.
+
+[id="plugins-{type}s-{plugin}-truststore"]
+===== `truststore`
+
+  * Value type is <<path,path>>
+  * There is no default value for this setting.
+
+If you need to use a custom truststore (`.jks`) specify it here. This does not work with .pem certs.
+
+[id="plugins-{type}s-{plugin}-truststore_password"]
+===== `truststore_password`
+
+  * Value type is <<password,password>>
+  * There is no default value for this setting.
+
+Specify the truststore password here.
+Note, most .jks files created with keytool require a password.
+
+===== `truststore_password`
+
+  * Value type is <<password,password>>
+  * There is no default value for this setting.
+
+Specify the truststore password here.
+Note, most .jks files created with keytool require a password.
 
 [id="plugins-{type}s-{plugin}-username"]
 ===== `username` 
