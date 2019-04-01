@@ -89,7 +89,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # Username to connect to JMS provider with
   config :username, :validate => :string
   # Password to use when connecting to the JMS provider
-  config :password, :validate => :string
+  config :password, :validate => :password
   # Url to use when connecting to the JMS provider
   config :broker_url, :validate => :string
 
@@ -122,9 +122,16 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
     @jms_config = jms_config
 
-    @logger.debug("JMS Config being used", :context => @jms_config)
-
+    @logger.debug("JMS Config being used ", :context => obfuscate_jms_config(@jms_config))
   end # def register
+
+  def obfuscate_jms_config(config)
+    config.each_with_object({}) { |(k, v), h| h[k] = obfuscatable?(k) ? 'xxxxx' : v }
+  end
+
+  def obfuscatable?(setting)
+    [:password, :keystore_password, :truststore_password].include?(setting)
+  end
 
   def jms_config
     return jms_config_from_yaml(@yaml_file, @yaml_section) if @yaml_file
@@ -137,7 +144,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
         :require_jars => @require_jars,
         :factory => @factory,
         :username => @username,
-        :password => @password,
+        :password => @password.value,
         :broker_url => @broker_url,
         :url => @broker_url # "broker_url" is named "url" with Oracle AQ
     }
