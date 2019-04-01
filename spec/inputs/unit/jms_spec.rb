@@ -8,17 +8,27 @@ describe "inputs/jms" do
   describe 'initialization' do
     let (:yaml_section) { 'activemq' }
     let (:jms_config) {{'yaml_file' => fixture_path(file), 'yaml_section' => yaml_section, 'destination' => 'ExampleQueue'}}
-
     context 'via yaml file' do
       context 'simple yaml configuration' do
         let (:file) { "jms.yml" }
-
+        let (:password) { 'the_password' }
         it 'should populate jms config from the yaml file' do
           jms = LogStash::Inputs::Jms.new(jms_config)
           expect(jms.jms_config).to include({:broker_url => "tcp://localhost:61616",
+                                             :password => password,
                                              :factory=>"org.apache.activemq.ActiveMQConnectionFactory",
                                              :require_jars=>["activemq-all.jar"]})
         end
+        it 'should not log the password in plaintext' do
+          jms = LogStash::Inputs::Jms.new(jms_config)
+          expect(jms.logger).to receive(:debug) do |message, params|
+            expect(params[:context]).to include(:password)
+            expect(params[:context][:password]).not_to eq(password)
+          end
+
+          jms.register
+        end
+
       end
 
       context 'jndi yaml configuration' do
@@ -37,14 +47,25 @@ describe "inputs/jms" do
                                                                "geronimo-jms_1.1_spec-1.1.1.jar",
                                                                "commons-lang-2.6.jar"]})
         end
+        it 'should not log the password in plaintext' do
+          jms = LogStash::Inputs::Jms.new(jms_config)
+          expect(jms.logger).to receive(:debug) do |message, params|
+            puts "The params are #{jms_config}"
+            expect(params[:context]).not_to include(:password)
+          end
+
+          jms.register
+        end
+
       end
     end
 
     context 'simple configuration' do
+      let (:password) { 'the_password' }
       let (:jms_config) {{
           'destination' => 'ExampleQueue',
           'username' => 'user',
-          'password' => 'the_password',
+          'password' => password,
           'broker_url' => 'tcp://localhost:61616',
           'pub_sub' => true,
           'factory' => 'org.apache.activemq.ActiveMQConnectionFactory',
@@ -56,7 +77,17 @@ describe "inputs/jms" do
                                            :factory=>"org.apache.activemq.ActiveMQConnectionFactory",
                                            :require_jars=>["activemq-all-5.15.8.jar"]})
       end
+      it 'should not log the password in plaintext' do
+        jms = LogStash::Inputs::Jms.new(jms_config)
+        expect(jms.logger).to receive(:debug) do |message, params|
+          expect(params[:context]).to include(:password)
+          expect(params[:context][:password]).not_to eq(password)
+        end
+
+        jms.register
+      end
     end
+
     context 'simple configuration with jndi' do
       let (:jms_config) {{
           'destination' => 'ExampleQueue',
