@@ -1,5 +1,5 @@
 #!/bin/bash
-export ACTIVEMQ_VERSION=5.15.8
+export ACTIVEMQ_VERSION=5.15.9
 ./setup_broker.sh
 bundle install
 bundle exec rspec
