@@ -53,6 +53,9 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 |Setting |Input type|Required
 | <<plugins-{type}s-{plugin}-broker_url>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-destination>> |<<string,string>>|Yes
+| <<plugins-{type}s-{plugin}-durable_subscriber>> |<<boolean,boolean>>|No
+| <<plugins-{type}s-{plugin}-durable_subscriber_client_id>> |<<string,string>>|No
+| <<plugins-{type}s-{plugin}-durable_subscriber_name>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-factory>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-include_body>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-include_header>> |<<boolean,boolean>>|No
@@ -66,7 +69,7 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-password>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-pub_sub>> |<<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-require_jars>> |<<array,array>>|No
-| <<plugins-{type}s-{plugin}-runner>> |<<string,string>>, one of `["consumer", "async", "thread"]`|No
+| <<plugins-{type}s-{plugin}-runner>> |<<string,string>>|__Deprecated__
 | <<plugins-{type}s-{plugin}-selector>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-threads>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-timeout>> |<<number,number>>|No
@@ -84,7 +87,7 @@ input plugins.
 &nbsp;
 
 [id="plugins-{type}s-{plugin}-broker_url"]
-===== `broker_url` 
+===== `broker_url`
 
   * Value type is <<string,string>>
   * There is no default value for this setting.
@@ -99,6 +102,42 @@ Url to use when connecting to the JMS provider.
   * There is no default value for this setting.
 
 Name of the destination queue or topic to use.
+
+[id="plugins-{type}s-{plugin}-durable_subscriber"]
+===== `durable_subscriber`
+
+  * Value type is <<boolean,boolean>>
+  * This is `false` by default
+  * Requires `pub_sub` to be true
+
+Setting this value to `true` will make subscriptions to topics "durable", allowing messages that arrived on the specified
+topic while Logstash is not running to still be read. Without setting this value, any messages sent to a topic while
+ Logstash is not actively listening will be lost. A durable subscriber specifies a unique identity consisting of the
+ topic (`destination`), the client id (`durable_subscriber_client_id`) and subscriber name
+ (`durable_subscriber_subscriber_name`). See your JMS Provider documentation for any further requirements/limitations
+ around these settings.
+
+* Note that a durable subscription can only have one active subscriber at a time.
+* Note that this setting is only permitted when `pub_sub` is set to true, and will generate a configuration error otherwise
+
+[id="plugins-{type}s-{plugin}-durable_subscriber_client_id"]
+===== `durable_subscriber_client_id`
+
+  * Value type is <<string,string>>
+  * If `durable_subscriber` is set, the default value for this setting is 'Logstash', otherwise this setting has no
+    effect
+
+This represents the value of the client ID for a durable subscribe, and is only used if `durable_subscriber` is set to `true`.
+
+[id="plugins-{type}s-{plugin}-durable_subscriber_name"]
+===== `durable_subscriber_name`
+
+  * Value type is <<string,string>>
+  * If `durable_subscriber` is set, the default value for this setting will be the same value as the `destination`
+    setting, otherwise this setting has no effect.
+
+  This represents the value of the subscriber name for a durable subscribtion, and is only used if `durable_subscriber`
+   is set to `true`. Please consult your JMS Provider documentation for constraints and requirements for this setting.
 
 [id="plugins-{type}s-{plugin}-factory"]
 ===== `factory` 
@@ -231,10 +270,8 @@ java CLASSPATH prior to starting Logstash.
 [id="plugins-{type}s-{plugin}-runner"]
 ===== `runner` 
 
-  * Value can be any of: `consumer`, `async`, `thread`
-  * Default value is `"consumer"`
+  * DEPRECATED WARNING: This configuration item is deprecated and may not be available in future versions.
 
-Choose an implementation of the run block. Value can be `consumer`, `async` or `thread`.
 
 [id="plugins-{type}s-{plugin}-selector"]
 ===== `selector` 

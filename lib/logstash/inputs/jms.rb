@@ -51,7 +51,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   config :use_jms_timestamp, :validate => :boolean, :default => false
 
   # Choose an implementation of the run block. Value can be either consumer, async or thread
-  config :runner, :validate => [ "consumer", "async", "thread" ], :default => "consumer"
+  config :runner, :deprecated => true
 
   # Set the selector to use to get messages off the queue or topic
   config :selector, :validate => :string
@@ -60,12 +60,17 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   config :timeout, :validate => :number, :default => 60
 
   # Polling interval in seconds.
-  # This is the time sleeping between asks to a consumed Queue.
-  # This parameter has non influence in the case of a subcribed Topic.
   config :interval, :validate => :number, :default => 10
 
   # If pub-sub (topic) style should be used.
   config :pub_sub, :validate => :boolean, :default => false
+
+  # Durable subscriber settings.
+  # By default the `durable_subscriber_name` will be set to the topic, and `durable_subscriber_client_id` will be set
+  # to 'Logstash'
+  config :durable_subscriber, :validate => :boolean, :default => false
+  config :durable_subscriber_client_id, :validate => :string, :required => false
+  config :durable_subscriber_name, :validate => :string, :required => false
 
   # Name of the destination queue or topic to use.
   config :destination, :validate => :string, :required => true
@@ -116,8 +121,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   public
   def register
     require "jms"
-    @connection = nil
 
+    check_config
     load_ssl_properties
 
     @jms_config = jms_config
@@ -140,15 +145,17 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   end
 
   def jms_config_from_configuration
-    {
+    config = {
         :require_jars => @require_jars,
         :factory => @factory,
         :username => @username,
-        :password => @password.value,
         :broker_url => @broker_url,
         :url => @broker_url # "broker_url" is named "url" with Oracle AQ
     }
+    config.merge!(:password => @password.value) unless @password.nil?
+    config
   end
+
 
   def jms_config_from_jndi
     {
@@ -169,6 +176,48 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     java.lang.System.setProperty("javax.net.ssl.trustStorePassword", @truststore_password.value) if @truststore_password
   end
 
+  def check_config
+    check_durable_subscription_config
+    raise(LogStash::ConfigurationError, "Threads cannot be > 1 if pub_sub is set") if @threads > 1 && @pub_sub
+  end
+
+  def check_durable_subscription_config
+    return unless @durable_subscriber
+    raise(LogStash::ConfigurationError, "pub_sub must be true if durable_subscriber is set") unless @pub_sub
+    @durable_subscriber_client_id ||= 'Logstash'
+    @durable_subscriber_name ||= destination
+  end
+
+  def run(output_queue)
+    begin
+      connection = JMS::Connection.new(@jms_config)
+      connection.client_id = @durable_subscriber_client_id if @durable_subscriber_client_id
+      session = connection.create_session(@jms_config)
+      connection.start
+      params = {:timeout => @timeout * 1000, :selector => @selector}
+      subscriber = subscriber(session, params)
+      until stop?
+        subscriber.each({:timeout => @interval * 1000}) do |message|
+          queue_event(message, output_queue)
+          break if stop?
+        end
+      end
+    rescue => e
+      @logger.warn("JMS Consumer died", :exception => e, :backtrace => e.backtrace)
+      unless stop?
+        sleep(5)
+        subscriber && subscriber.close
+        session && session.close
+        connection && connection.close
+        retry
+      end
+    ensure
+      subscriber && subscriber.close
+      session && session.close
+      connection && connection.close
+    end
+  end # def run_consumer
+
   private
   def queue_event(msg, output_queue)
     begin
@@ -179,7 +228,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
             event.set(field.to_s, value) # TODO(claveau): needs codec.decode or converter.convert ?
           end
         elsif msg.java_kind_of?(JMS::TextMessage) || msg.java_kind_of?(JMS::BytesMessage)
-          if !msg.to_s.nil?
+          unless msg.to_s.nil?
             @codec.decode(msg.to_s) do |event_message|
               event = event_message
             end
@@ -197,13 +246,14 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
       end
 
       if @include_header
-        msg.attributes.each do |field, value|
+        msg.attributes && msg.attributes.each do |field, value|
           event.set(field.to_s, value)
         end
       end
 
       if @include_properties
-        msg.properties.each do |field, value|
+        puts "Message properties are #{msg.properties}"
+        msg.properties && msg.properties.each do |field, value|
           event.set(field.to_s, value)
         end
       end
@@ -213,102 +263,26 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
     rescue => e # parse or event creation error
       @logger.error("Failed to create event", :message => msg, :exception => e,
-                    :backtrace => e.backtrace);
+                    :backtrace => e.backtrace)
     end
   end
 
-  # Consume all available messages on the queue
-  # sleeps some time, then consume again
-  private
-  def run_consumer(output_queue)
-    JMS::Connection.session(@jms_config) do |session|
-      destination_key = @pub_sub ? :topic_name : :queue_name
-      while !stop?
-        session.consume(destination_key => @destination, :timeout=>@timeout, :selector => @selector, :buffered_message => @oracle_aq_buffered_messages) do |message|
-          queue_event message, output_queue
-          break if stop?
-        end
-        sleep @interval
-      end
-    end
-  rescue => e
-    @logger.warn("JMS Consumer died", :exception => e, :backtrace => e.backtrace)
-    sleep(10)
-    retry unless stop?
-  end # def run_consumer
 
-  # Consume all available messages on the queue through a listener
-  private
-  def run_thread(output_queue)
-    connection = JMS::Connection.new(@jms_config)
-    connection.on_exception do |jms_exception|
-      @logger.warn("JMS Exception has occurred: #{jms_exception}")
-    end
-
+  def subscriber(session, params)
     destination_key = @pub_sub ? :topic_name : :queue_name
-    connection.on_message(destination_key => @destination, :selector => @selector) do |message|
-      queue_event message, output_queue
-    end
-    connection.start
-    while !stop?
-      @logger.debug("JMS Thread sleeping ...")
-      sleep @interval
-    end
-  rescue => e
-    @logger.warn("JMS Consumer died", :exception => e, :backtrace => e.backtrace)
-    sleep(10)
-    retry unless stop?
-  end # def run_thread
+    queue_or_topic = session.create_destination(params.merge({destination_key => @destination}))
+    @durable_subscriber ? durable_subscriber(session, queue_or_topic, params) :
+                          regular_subscriber(session, queue_or_topic, params)
+  end
 
-  # Consume all available messages on the queue through a listener
-  private
-  def run_async(output_queue)
-    JMS::Connection.start(@jms_config) do |connection|
-      # Define exception listener
-      # The problem here is that we do not handle any exception
-      connection.on_exception do |jms_exception|
-        @logger.warn("JMS Exception has occurred: #{jms_exception}")
-        raise jms_exception
-      end
-      # Define Asynchronous code block to be called every time a message is received
-      destination_key = @pub_sub ? :topic_name : :queue_name
-      connection.on_message(destination_key => @destination, :selector => @selector) do |message|
-        queue_event message, output_queue
-      end
-      # Since the on_message handler above is in a separate thread the thread needs
-      # to do some other work. It will just sleep for 10 seconds.
-      while !stop?
-        @logger.debug("JMS Thread sleeping ...")
-        sleep @interval
-      end
-    end
-  rescue => e
-    @logger.warn("JMS Consumer died", :exception => e, :backtrace => e.backtrace)
-    sleep(10)
-    retry unless stop?
-  end # def run_async
 
-  public
-  def run(output_queue)
-    case @runner
-    when "consumer" then
-      run_consumer(output_queue)
-    when "async" then
-      run_async(output_queue)
-    when "thread" then
-      run_thread(output_queue)
-    end
-  end # def run
+  def durable_subscriber(session, queue_or_topic, params)
+    params[:selector]  ? session.create_durable_subscriber(queue_or_topic, params[:selector], @durable_subscriber_name) :
+                         session.create_durable_subscriber(queue_or_topic, @durable_subscriber_name)
+  end
 
-  public
-  def close
-    @logger.info("Closing JMS connection")
-    @connection.close rescue nil
-  end # def close
-
-  public
-  def stop
-    @logger.info("Stopping JMS consumer")
-    @connection.stop rescue nil
-  end # def stop
+  def regular_subscriber(session, queue_or_topic, params)
+    params[:selector] ? session.create_consumer(queue_or_topic, params[:selector]) :
+                        session.create_consumer(queue_or_topic)
+  end
 end # class LogStash::Inputs::Jms
