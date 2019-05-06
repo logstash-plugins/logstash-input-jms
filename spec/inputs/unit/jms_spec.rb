@@ -133,7 +133,6 @@ describe "inputs/jms" do
 
         plugin.register
       end
-
     end
 
     context 'simple configuration with jndi' do

@@ -4,39 +4,96 @@ require 'jms'
 require 'json'
 require 'securerandom'
 
+
+
 shared_examples_for "a JMS input" do
   context 'when inputting messages' do
-    it 'should receive a logstash event from the jms queue' do
-      input.register
-      queue  = []
+    let (:destination) { "#{pub_sub ? 'topic' : 'queue'}://#{queue_name}"}
+    let (:queue) { [] }
 
-      tt = Thread.new do
-        sleep 1
-        properties_before_send = java.lang.System.getProperties
+    context 'when the message is a text message' do
+      let(:message) { "Hello There" }
 
-        begin
-          input.load_ssl_properties
-          config = input.jms_config_from_yaml(fixture_path('jms.yml'), yaml_section)
-          raise "JMS Provider option:#{jms_provider} not found in jms.yml file" unless config
-          destination_key = pub_sub ? :topic_name : :queue_name
-          JMS::Connection.session(config) do |session|
-            session.producer(destination_key => queue_name) do |producer|
-              producer.send(session.message(message))
-            end
-            session.close
+      it 'process the property and the message' do
+        send_message do |session|
+          msg = session.message(message)
+          msg.set_string_property('this', 'that')
+          msg
+        end
+        expect(queue.first.get('message')).to eql (message)
+        expect(queue.first.get('this')).to eql('that')
+      end
+
+      context 'when the property is skipped' do
+        let (:jms_config) { super.merge({'skip_properties' => ['this']})}
+
+        it 'should skip the property and process the message' do
+          send_message do |session|
+            msg = session.message(message)
+            msg.set_string_property('this', 'that')
+            msg
           end
-          input.do_stop
-        ensure
-          java.lang.System.setProperties(properties_before_send)
+          expect(queue.first.get('message')).to eql (message)
+          expect(queue.first.get('this')).to be_nil
         end
       end
-      input.run(queue)
 
-      destination = "#{pub_sub ? 'topic' : 'queue'}://#{queue_name}"
-      tt.join(3)
-      expect(queue.size).to eql 1
-      expect(queue.first.get('message')).to eql (message)
-      expect(queue.first.get("jms_destination")).to eql(destination)
+      context 'when the header is skipped' do
+        let (:jms_config) { super.merge({'skip_headers' => ['jms_reply_to']})}
+        it 'should skip the property and read the message' do
+          send_message do |session|
+            msg = session.message(message)
+            msg.reply_to = session.create_destination(:topic_name => SecureRandom.hex(8))
+            msg
+          end
+          expect(queue.first.get('message')).to eql (message)
+          expect(queue.first.get('jms_reply_to')).to be_nil
+        end
+      end
+
+      context 'when the header is skipped' do
+        it 'should skip the property and read the message' do
+          send_message do |session|
+            msg = session.message(message)
+            msg.reply_to = session.create_destination(:topic_name => SecureRandom.hex(8))
+            msg
+          end
+          expect(queue.first.get('message')).to eql (message)
+          expect(queue.first.get('jms_reply_to')).to_not be_nil
+        end
+      end
+
+      it 'should receive a logstash event from the jms queue' do
+        send_message
+        expect(queue.size).to eql 1
+        expect(queue.first.get('message')).to eql (message)
+        expect(queue.first.get("jms_destination")).to eql(destination)
+      end
+    end
+
+    context 'when the message is map message' do
+      let(:message) { {:one => 1} }
+      it 'should read the message' do
+        send_message
+        expect(queue.size).to eql 1
+        expect(queue.first.get('one')).to eql (1)
+        expect(queue.first.get("jms_destination")).to eql(destination)
+      end
+    end
+
+    context 'when the message is a bytes message' do
+      let(:message) { 'hello world'.to_java_bytes }
+
+      it 'should read the message' do
+        send_message do |session|
+          jms_message = session.createBytesMessage
+          jms_message.write_bytes(message)
+          jms_message
+        end
+        expect(queue.size).to eql 1
+        expect(queue.first.get('message')).to eql ('hello world')
+        expect(queue.first.get("jms_destination")).to eql(destination)
+      end
     end
   end
 end
@@ -66,9 +123,18 @@ describe "input/jms", :integration => true do
   end
 
   context 'with plaintext', :plaintext => true do
-
     context 'with pub_sub true' do
       let (:pub_sub) { true }
+      it_behaves_like 'a JMS input'
+    end
+
+    context 'with pub_sub true and durable subscriber' do
+      let (:jms_config) { super.merge({'durable_subscriber' => true,
+                           'durable_subscriber_client_id' => SecureRandom.hex(8),
+                           'durable_subscriber_name' => SecureRandom.hex(8) } }
+
+      let (:pub_sub) { true }
+
       it_behaves_like 'a JMS input'
     end
 
@@ -76,7 +142,6 @@ describe "input/jms", :integration => true do
       let (:pub_sub) { false }
       it_behaves_like 'a JMS input'
     end
-
   end
 
   context 'with tls', :tls => true do
@@ -86,6 +151,16 @@ describe "input/jms", :integration => true do
 
     context 'with pub_sub true' do
       let (:pub_sub) { true }
+      it_behaves_like 'a JMS input'
+    end
+
+    context 'with pub_sub true and durable subscriber' do
+      let (:jms_config) { super.merge({'durable_subscriber' => true,
+                           'durable_subscriber_client_id' => SecureRandom.hex(8),
+                           'durable_subscriber_name' => SecureRandom.hex(8) } }
+
+      let (:pub_sub) { true }
+
       it_behaves_like 'a JMS input'
     end
 

@@ -35,6 +35,13 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   config :include_header, :validate => :boolean, :default => true
   # Include JMS Message Properties Field values in the event
   config :include_properties, :validate => :boolean, :default => true
+
+  # List of headers to skip from the event if headers are included
+  config :skip_headers, :validate => :array, :default => []
+
+  # List of properties to skip from the event if properties are included
+  config :skip_properties, :validate => :array, :default => []
+
   # Include JMS Message Body in the event
   # Supports TextMessage, MapMessage and ByteMessage
   # If the JMS Message is a TextMessage or ByteMessage, then the value will be in the "message" field of the event
@@ -197,6 +204,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
       params = {:timeout => @timeout * 1000, :selector => @selector}
       subscriber = subscriber(session, params)
       until stop?
+        # This will read from the queue/topic until :timeout is breached, or messages are available whichever comes
+        # first.
         subscriber.each({:timeout => @interval * 1000}) do |message|
           queue_event(message, output_queue)
           break if stop?
@@ -218,7 +227,6 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     end
   end # def run_consumer
 
-  private
   def queue_event(msg, output_queue)
     begin
       if @include_body
@@ -234,7 +242,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
             end
           end
         else
-          @logger.error( "Unknown data type #{msg.data.class.to_s} in Message" )
+          @logger.error( "Unsupported message type #{msg.data.class.to_s}" )
         end
       end
 
@@ -247,14 +255,13 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
       if @include_header
         msg.attributes && msg.attributes.each do |field, value|
-          event.set(field.to_s, value)
+          event.set(field.to_s, value) unless @skip_headers.include?(field.to_s)
         end
       end
 
       if @include_properties
-        puts "Message properties are #{msg.properties}"
         msg.properties && msg.properties.each do |field, value|
-          event.set(field.to_s, value)
+          event.set(field.to_s, value) unless @skip_properties.include?(field.to_s)
         end
       end
 

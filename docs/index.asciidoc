@@ -127,7 +127,7 @@ topic while Logstash is not running to still be read. Without setting this value
   * If `durable_subscriber` is set, the default value for this setting is 'Logstash', otherwise this setting has no
     effect
 
-This represents the value of the client ID for a durable subscribe, and is only used if `durable_subscriber` is set to `true`.
+This represents the value of the client ID for a durable subscribtion, and is only used if `durable_subscriber` is set to `true`.
 
 [id="plugins-{type}s-{plugin}-durable_subscriber_name"]
 ===== `durable_subscriber_name`
@@ -136,8 +136,8 @@ This represents the value of the client ID for a durable subscribe, and is only 
   * If `durable_subscriber` is set, the default value for this setting will be the same value as the `destination`
     setting, otherwise this setting has no effect.
 
-  This represents the value of the subscriber name for a durable subscribtion, and is only used if `durable_subscriber`
-   is set to `true`. Please consult your JMS Provider documentation for constraints and requirements for this setting.
+This represents the value of the subscriber name for a durable subscribtion, and is only used if `durable_subscriber`
+is set to `true`. Please consult your JMS Provider documentation for constraints and requirements for this setting.
 
 [id="plugins-{type}s-{plugin}-factory"]
 ===== `factory` 
