@@ -39,7 +39,7 @@ Here is a config example to pull from a queue:
     yaml_file => "~/jms.yml"
     yaml_section => "mybroker"
   }
----
+----
 
 
 [id="plugins-{type}s-{plugin}-options"]
