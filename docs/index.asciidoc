@@ -26,6 +26,8 @@ Read events from a Jms Broker. Supports both Jms Queues and Topics.
 For more information about Jms, see <http://docs.oracle.com/javaee/6/tutorial/doc/bncdq.html>
 For more information about the Ruby Gem used, see <http://github.com/reidmorrison/jruby-jms>
 Here is a config example to pull from a queue:
+[source,ruby]
+----
  jms {
     include_header => false
     include_properties => false
@@ -37,7 +39,7 @@ Here is a config example to pull from a queue:
     yaml_file => "~/jms.yml"
     yaml_section => "mybroker"
   }
-
+----
 
 
 [id="plugins-{type}s-{plugin}-options"]
