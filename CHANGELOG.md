@@ -1,3 +1,6 @@
+## 3.0.6
+  - Fixed formatting issues in documentation [#32](https://github.com/logstash-plugins/logstash-input-jms/pull/32) and [#33](https://github.com/logstash-plugins/logstash-input-jms/pull/33]
+
 ## 3.0.5
   - Docs: Set the default_codec doc attribute.
 
