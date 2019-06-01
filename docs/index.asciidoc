@@ -36,7 +36,7 @@ Here is a config example to pull from a queue:
     use_jms_timestamp => false
     interval => 10
     destination => "myqueue"
-    pub-sub => false
+    pub_sub => false
     yaml_file => "~/jms.yml"
     yaml_section => "mybroker"
   }
