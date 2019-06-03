@@ -203,6 +203,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
       connection.start
       params = {:timeout => @timeout * 1000, :selector => @selector}
       subscriber = subscriber(session, params)
+
       until stop?
         # This will read from the queue/topic until :timeout is breached, or messages are available whichever comes
         # first.
@@ -212,7 +213,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
         end
       end
     rescue => e
-      @logger.warn("JMS Consumer died", :exception => e, :backtrace => e.backtrace)
+      logger.warn("JMS Consumer Died", error_hash(e))
       unless stop?
         sleep(5)
         subscriber && subscriber.close
@@ -226,6 +227,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
       connection && connection.close
     end
   end # def run_consumer
+
 
   def queue_event(msg, output_queue)
     begin
@@ -292,4 +294,33 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     params[:selector] ? session.create_consumer(queue_or_topic, params[:selector]) :
                         session.create_consumer(queue_or_topic)
   end
+
+  def error_hash(e)
+    error_hash = {:exception => e.class.name, :exception_message => e.message, :backtrace => e.backtrace}
+    root_cause = get_root_cause(e)
+    unless root_cause.nil?
+      error_hash.merge!(:root_cause => root_cause)
+    end
+    error_hash
+  end
+
+  # JMS Exceptions can contain chains of Exceptions, making it difficult to determine the root cause of an error
+  # without knowing the actual root cause behind the problem.
+  # This method protects against Java Exceptions where the cause methods loop. If there is a cause loop, the last
+  # cause exception before the loop is detected will be returned
+  def get_root_cause(e)
+    return nil unless e.respond_to?(:get_cause)
+    cause = e
+    slow_pointer = e
+    # Use a slow pointer to avoid cause loops in Java Exceptions
+    move_slow = false
+    until (next_cause = cause.get_cause).nil?
+      cause = next_cause
+      return {:exception => cause.class.name, :exception_message => cause.message, :exception_loop => true } if cause == slow_pointer
+      slow_pointer = slow_pointer.cause if move_slow
+      move_slow = !move_slow
+    end
+    {:exception => cause.class.name, :exception_message => cause.message }
+  end
+
 end # class LogStash::Inputs::Jms
