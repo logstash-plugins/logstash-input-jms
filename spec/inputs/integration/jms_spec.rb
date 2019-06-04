@@ -10,64 +10,72 @@ shared_examples_for "a JMS input" do
   context 'when inputting messages' do
     let (:destination) { "#{pub_sub ? 'topic' : 'queue'}://#{queue_name}"}
     let (:queue) { [] }
+    let (:topic_name) { SecureRandom.hex(8) }
 
     context 'when the message is a text message' do
       let(:message) { "Hello There" }
 
-      it 'process the property and the message' do
-        send_message do |session|
-          msg = session.message(message)
-          msg.set_string_property('this', 'that')
-          msg
-        end
-        expect(queue.first.get('message')).to eql (message)
-        expect(queue.first.get('this')).to eql('that')
-      end
+      context 'when properties are skipped' do
+        let (:jms_config) { super.merge({'skip_properties' => ['this', 'that']})}
 
-      context 'when the property is skipped' do
-        let (:jms_config) { super.merge({'skip_properties' => ['this']})}
-
-        it 'should skip the property and process the message' do
+        it 'should skip the specified property and process other properties, headers and the message' do
           send_message do |session|
             msg = session.message(message)
-            msg.set_string_property('this', 'that')
+            msg.reply_to = session.create_destination(:topic_name => topic_name)
+            msg.set_string_property('this', 'this_prop')
+            msg.set_string_property('that', 'that_prop')
+            msg.set_string_property('the_other', 'the_other_prop')
             msg
           end
           expect(queue.first.get('message')).to eql (message)
+          expect(queue.first.get('jms_destination')).to_not be_nil
+          expect(queue.first.get('jms_timestamp')).to_not be_nil
           expect(queue.first.get('this')).to be_nil
+          expect(queue.first.get('that')).to be_nil
+          expect(queue.first.get('the_other')).to eql('the_other_prop')
+          expect(queue.first.get('jms_reply_to').physical_name).to eq(topic_name)
         end
       end
 
-      context 'when the header is skipped' do
-        let (:jms_config) { super.merge({'skip_headers' => ['jms_reply_to']})}
-        it 'should skip the property and read the message' do
+      context 'when headers are skipped' do
+        let (:jms_config) { super.merge({'skip_headers' => ['jms_destination']})}
+        it 'should skip the specified header and process other headers, properties and the message' do
           send_message do |session|
             msg = session.message(message)
-            msg.reply_to = session.create_destination(:topic_name => SecureRandom.hex(8))
+            msg.reply_to = session.create_destination(:topic_name => topic_name)
+            msg.set_string_property('this', 'this_prop')
+            msg.set_string_property('that', 'that_prop')
+            msg.set_string_property('the_other', 'the_other_prop')
             msg
           end
           expect(queue.first.get('message')).to eql (message)
-          expect(queue.first.get('jms_reply_to')).to be_nil
+          expect(queue.first.get('jms_destination')).to be_nil
+          expect(queue.first.get('jms_timestamp')).to_not be_nil
+          expect(queue.first.get('jms_reply_to').physical_name).to eq(topic_name)
+          expect(queue.first.get('this')).to eq('this_prop')
+          expect(queue.first.get('that')).to eq('that_prop')
+          expect(queue.first.get('the_other')).to eq('the_other_prop')
         end
       end
 
-      context 'when the header is skipped' do
-        it 'should skip the property and read the message' do
+      context 'when neither header nor property is skipped ' do
+        it 'should process properties, headers and the message' do
           send_message do |session|
             msg = session.message(message)
-            msg.reply_to = session.create_destination(:topic_name => SecureRandom.hex(8))
+            msg.reply_to = session.create_destination(:topic_name => topic_name)
+            msg.set_string_property('this', 'this_prop')
+            msg.set_string_property('that', 'that_prop')
+            msg.set_string_property('the_other', 'the_other_prop')
             msg
           end
           expect(queue.first.get('message')).to eql (message)
-          expect(queue.first.get('jms_reply_to')).to_not be_nil
+          expect(queue.first.get('jms_reply_to').physical_name).to eq(topic_name)
+          expect(queue.first.get('jms_timestamp')).to_not be_nil
+          expect(queue.first.get('jms_destination')).to_not be_nil
+          expect(queue.first.get('this')).to eq('this_prop')
+          expect(queue.first.get('that')).to eq('that_prop')
+          expect(queue.first.get('the_other')).to eq('the_other_prop')
         end
-      end
-
-      it 'should receive a logstash event from the jms queue' do
-        send_message
-        expect(queue.size).to eql 1
-        expect(queue.first.get('message')).to eql (message)
-        expect(queue.first.get("jms_destination")).to eql(destination)
       end
     end
 
@@ -131,7 +139,7 @@ describe "input/jms", :integration => true do
     context 'with pub_sub true and durable subscriber' do
       let (:jms_config) { super.merge({'durable_subscriber' => true,
                            'durable_subscriber_client_id' => SecureRandom.hex(8),
-                           'durable_subscriber_name' => SecureRandom.hex(8) } }
+                           'durable_subscriber_name' => SecureRandom.hex(8) } ) }
 
       let (:pub_sub) { true }
 
@@ -157,7 +165,7 @@ describe "input/jms", :integration => true do
     context 'with pub_sub true and durable subscriber' do
       let (:jms_config) { super.merge({'durable_subscriber' => true,
                            'durable_subscriber_client_id' => SecureRandom.hex(8),
-                           'durable_subscriber_name' => SecureRandom.hex(8) } }
+                           'durable_subscriber_name' => SecureRandom.hex(8) } ) }
 
       let (:pub_sub) { true }
 

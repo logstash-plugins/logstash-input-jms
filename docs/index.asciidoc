@@ -265,6 +265,55 @@ logstash configuration:
   }
 
 
+==== Troubleshooting
+
+===== Missing Jar files
+
+The most common issue is missing jar files, which may be jar files provided by the JMS vendor, or jar files that the JMS
+ vendor requires to run. This issue can manifest in different ways, depending on where the missing jar file is discovered.
+
+
+  Example log output:
+
+  ```
+  Failed to load JMS Connection, likely because a JMS Provider is not on the Logstash classpath or correctly
+  specified by the plugin's `require_jars` directive
+  {:exception=>"cannot load Java class javax.jms.DeliveryMode"
+  ```
+
+  ```
+    JMS Consumer Died {:exception=>"Java::JavaxNaming::NoInitialContextException",
+                       :exception_message=>"Cannot instantiate class:"
+  ```
+
+  ```
+  warning: thread "[main]<jms" terminated with exception (report_on_exception is true):
+  java.lang.NoClassDefFoundError: org/apache/commons/lang/exception/NestableException
+  ```
+
+  ```
+  JMS Consumer Died {:exception=>"Java::JavaxJms::JMSException", :exception_message=>"io/netty/channel/epoll/Epoll",
+  :root_cause=>{:exception=>"Java::JavaLang::NoClassDefFoundError", :exception_message=>"io/netty/channel/epoll/Epoll"}
+  ```
+
+If any of these issues occur, check the list of `require_jars` in either the Logstash configuration or yaml configuration
+  files.
+
+===== Setting System Properties
+
+Many JMS providers allow or expect System properties to be set to configure certain properties when using JMS, for
+example, the Apache qpid JMS client allows the connection factory lookup to be stored there, and the Solace JMS client
+allows many properties, such as number of connection retries to be set as System properties. Any system properties that
+are set should be set in the Logstash `jvm.options` file.
+
+===== Multiple JMS inputs/outputs in the same Logstash process
+
+The use of multiple JMS consumers and producers in the same Logstash process is unsupported if:
+
+  * System properties need to be different for any of the consumers/producers
+  * Different keystores or truststores are required for any of the consumers/producers
+
+
 [id="plugins-{type}s-{plugin}-options"]
 ==== Jms Input Configuration Options
 
