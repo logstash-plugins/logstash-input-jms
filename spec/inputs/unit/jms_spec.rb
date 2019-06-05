@@ -12,15 +12,25 @@ describe "inputs/jms" do
   describe 'initialization' do
 
     context 'configuration check' do
+      context 'if threads is > 1' do
+          let(:thread_count) { 2 }
+          let(:jms_config) { super.merge({'threads' => thread_count})}
 
-      context 'with pub_sub set to true' do
-        let(:jms_config) { super.merge({'pub_sub' => true})}
+          context 'with pub_sub set to true' do
+            let(:jms_config) { super.merge({'pub_sub' => true})}
 
-        context 'if threads is > 1' do
-          let(:jms_config) { super.merge({'threads' => 2})}
-          it 'should raise a configuration error' do
-            expect { plugin.register }.to raise_error(LogStash::ConfigurationError)
+            it 'should raise a configuration error' do
+              expect { plugin.register }.to raise_error(LogStash::ConfigurationError)
+            end
           end
+
+          context 'with pub_sub set to false' do
+            let(:jms_config) { super.merge({'pub_sub' => false})}
+
+            it 'should not raise a configuration error' do
+              plugin.register
+              expect(plugin.threads).to eq(thread_count)
+            end
         end
       end
 
@@ -167,47 +177,57 @@ describe "inputs/jms" do
   end
 
   describe '#error_hash' do
-
-    context 'with a java exception cause chain' do
+    context 'should handle Java exceptions with a chain of causes' do
       let (:raised) { java.lang.Exception.new("Outer", java.lang.RuntimeException.new("middle", java.io.IOException.new("Inner")))}
-      let (:expected_message) { "Inner" }
 
-        it 'should find contain the root cause of a java exception cause chain' do
-          expect(plugin.error_hash(raised)[:exception].to_s).to eql("Java::JavaLang::Exception")
-          expect(plugin.error_hash(raised)[:exception_message].to_s).to eql("Outer")
-          expect(plugin.error_hash(raised)[:root_cause][:exception]).to eql("Java::JavaIo::IOException")
-          expect(plugin.error_hash(raised)[:root_cause][:exception_message]).to eql("Inner")
-          expect(plugin.error_hash(raised)[:root_cause][:exception_loop]).to be_falsey
-        end
-
+      it 'should find contain the root cause of a java exception cause chain' do
+        expect(plugin.error_hash(raised)[:exception].to_s).to eql("Java::JavaLang::Exception")
+        expect(plugin.error_hash(raised)[:exception_message].to_s).to eql("Outer")
+        expect(plugin.error_hash(raised)[:root_cause][:exception]).to eql("Java::JavaIo::IOException")
+        expect(plugin.error_hash(raised)[:root_cause][:exception_message]).to eql("Inner")
+        expect(plugin.error_hash(raised)[:root_cause][:exception_loop]).to be_falsey
       end
-      context 'should not go into an infinite loop when a Java Exception cause chain contains a loop' do
-        let (:inner)  { java.io.IOException.new("Inner") }
-        let (:middle) { java.lang.RuntimeException.new("Middle", inner) }
-        let (:raised) { java.lang.Exception.new("Outer", middle)}
+    end
 
-        before :each do
-          inner.init_cause(middle)
-        end
+    context 'should handle Java Exceptions with a cause chain loop' do
+      let (:inner)  { java.io.IOException.new("Inner") }
+      let (:middle) { java.lang.RuntimeException.new("Middle", inner) }
+      let (:raised) { java.lang.Exception.new("Outer", middle)}
 
-        it 'should not go into an infinite loop when a Java Exception cause chain contains a loop' do
-          expect(plugin.error_hash(raised)[:exception].to_s).to eql("Java::JavaLang::Exception")
-          expect(plugin.error_hash(raised)[:exception_message].to_s).to eql("Outer")
-          expect(plugin.error_hash(raised)[:root_cause][:exception]).to eql("Java::JavaLang::RuntimeException")
-          expect(plugin.error_hash(raised)[:root_cause][:exception_message]).to eql("Middle")
-          expect(plugin.error_hash(raised)[:root_cause][:exception_loop]).to be_truthy
-        end
+      before :each do
+        inner.init_cause(middle)
       end
 
-    context 'should not go into an infinite loop when a Java Exception cause chain contains a loop' do
+      it 'should not go into an infinite loop' do
+        expect(plugin.error_hash(raised)[:exception].to_s).to eql("Java::JavaLang::Exception")
+        expect(plugin.error_hash(raised)[:exception_message].to_s).to eql("Outer")
+        expect(plugin.error_hash(raised)[:root_cause][:exception]).to eql("Java::JavaLang::RuntimeException")
+        expect(plugin.error_hash(raised)[:root_cause][:exception_message]).to eql("Middle")
+      end
+
+      it 'should report that an exception loop was detected' do
+        expect(plugin.error_hash(raised)[:root_cause][:exception_loop]).to be_truthy
+      end
+    end
+
+    context 'should handle Java Exceptions with no cause' do
+      let (:raised) { java.lang.Exception.new("Only")}
+
+      it 'should populate exception, exception_message but not root_cause' do
+        expect(plugin.error_hash(raised)[:exception].to_s).to eql("Java::JavaLang::Exception")
+        expect(plugin.error_hash(raised)[:exception_message].to_s).to eql("Only")
+        expect(plugin.error_hash(raised)[:root_cause]).to be_nil
+      end
+    end
+
+    context 'should handle Ruby Errors' do
       let (:raised) { StandardError.new("Ruby") }
 
-      it 'should not go into an infinite loop when a Java Exception cause chain contains a loop' do
+      it 'should populate exception, exception_message but not root_cause' do
         expect(plugin.error_hash(raised)[:exception].to_s).to eql("StandardError")
         expect(plugin.error_hash(raised)[:exception_message].to_s).to eql("Ruby")
         expect(plugin.error_hash(raised)[:root_cause]).to be_nil
       end
     end
-
   end
 end

@@ -307,9 +307,10 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # JMS Exceptions can contain chains of Exceptions, making it difficult to determine the root cause of an error
   # without knowing the actual root cause behind the problem.
   # This method protects against Java Exceptions where the cause methods loop. If there is a cause loop, the last
-  # cause exception before the loop is detected will be returned
+  # cause exception before the loop is detected will be returned, along with an entry in the root_cause hash indicating
+  # that an exception loop was detected.
   def get_root_cause(e)
-    return nil unless e.respond_to?(:get_cause)
+    return nil unless e.respond_to?(:get_cause) && !e.get_cause.nil?
     cause = e
     slow_pointer = e
     # Use a slow pointer to avoid cause loops in Java Exceptions

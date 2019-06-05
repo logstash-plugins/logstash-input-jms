@@ -577,6 +577,8 @@ If `include_properties` is set, a list of properties to skip processing on can b
   * Value type is <<number,number>>
   * Default value is `1`
 
+* Note that if pub_sub is set to true, this value *must* be 1. A configuration error will be thrown otherwise
+
 [id="plugins-{type}s-{plugin}-timeout"]
 ===== `timeout` 
 
@@ -600,7 +602,8 @@ If you need to use a custom truststore (`.jks`) specify it here. This does not w
   * There is no default value for this setting.
 
 Specify the truststore password here.
-Note, most .jks files created with keytool require a password.
+
+* Note, most .jks files created with keytool require a password.
 
 
 [id="plugins-{type}s-{plugin}-use_jms_timestamp"]
