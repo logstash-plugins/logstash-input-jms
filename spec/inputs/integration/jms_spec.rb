@@ -21,7 +21,6 @@ shared_examples_for "a JMS input" do
         it 'should skip the specified property and process other properties, headers and the message' do
           send_message do |session|
             msg = session.message(message)
-            msg.reply_to = session.create_destination(:topic_name => topic_name)
             msg.set_string_property('this', 'this_prop')
             msg.set_string_property('that', 'that_prop')
             msg.set_string_property('the_other', 'the_other_prop')
@@ -33,12 +32,11 @@ shared_examples_for "a JMS input" do
           expect(queue.first.get('this')).to be_nil
           expect(queue.first.get('that')).to be_nil
           expect(queue.first.get('the_other')).to eql('the_other_prop')
-          expect(queue.first.get('jms_reply_to').physical_name).to eq(topic_name)
         end
       end
 
       context 'when headers are skipped' do
-        let (:jms_config) { super.merge({'skip_headers' => ['jms_destination']})}
+        let (:jms_config) { super.merge({'skip_headers' => ['jms_destination', 'jms_reply_to']})}
         it 'should skip the specified header and process other headers, properties and the message' do
           send_message do |session|
             msg = session.message(message)
@@ -51,7 +49,6 @@ shared_examples_for "a JMS input" do
           expect(queue.first.get('message')).to eql (message)
           expect(queue.first.get('jms_destination')).to be_nil
           expect(queue.first.get('jms_timestamp')).to_not be_nil
-          expect(queue.first.get('jms_reply_to').physical_name).to eq(topic_name)
           expect(queue.first.get('this')).to eq('this_prop')
           expect(queue.first.get('that')).to eq('that_prop')
           expect(queue.first.get('the_other')).to eq('the_other_prop')
@@ -62,14 +59,12 @@ shared_examples_for "a JMS input" do
         it 'should process properties, headers and the message' do
           send_message do |session|
             msg = session.message(message)
-            msg.reply_to = session.create_destination(:topic_name => topic_name)
             msg.set_string_property('this', 'this_prop')
             msg.set_string_property('that', 'that_prop')
             msg.set_string_property('the_other', 'the_other_prop')
             msg
           end
           expect(queue.first.get('message')).to eql (message)
-          expect(queue.first.get('jms_reply_to').physical_name).to eq(topic_name)
           expect(queue.first.get('jms_timestamp')).to_not be_nil
           expect(queue.first.get('jms_destination')).to_not be_nil
           expect(queue.first.get('this')).to eq('this_prop')
