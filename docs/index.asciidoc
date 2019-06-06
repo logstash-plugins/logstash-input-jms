@@ -53,12 +53,7 @@ Here is a config example to pull from a queue:
     include_properties => false <6>
     include_body => true <6>
     use_jms_timestamp => false <7>
-    interval => 10 <8>
-    runner => one of `["consumer", "async", "thread"]` <12>
-    selector => <13>
-    threads => <14>
-    timeout => <15>
-    oracle_aq_buffered_messages => <10>
+    selector => <8>
   }
 ----
 
@@ -71,8 +66,7 @@ Here is a config example to pull from a queue:
 <6> Parts of the JMS Message to include in the event - headers, properties and the message body can be included or
     excluded from the event.
 <7> Determines whether the JMSTimestamp header is used to populate the `@timestamp` field.
-
-
+<8> Message selector: <RB> TODO
 
 ==== Logstash Configuration
 
@@ -87,7 +81,7 @@ Here is a config example to pull from a queue:
     use_jms_timestamp => false <1>
     interval => 10 <1>
     destination => "myqueue" <1>
-    pub-sub => false <1>
+    pub_sub => false <1>
     username => xxxx <2>
     password => xxxx <2>
     factory => org.apache.activemq.ActiveMQConnectionFactory <3>
@@ -112,7 +106,7 @@ Here is a config example to pull from a queue:
     use_jms_timestamp => false <1>
     interval => 10 <1>
     destination => "myqueue" <1>
-    pub-sub => false <1>
+    pub_sub => false <1>
     jndi_name => /jms/cf/default <2>
     jndi_context => {
      'java.naming.factory.initial' => com.solacesystems.jndi.SolJNDIInitialContextFactory
@@ -254,6 +248,9 @@ This can be set in the yaml file, or in the main configuration if a yaml file is
 
 logstash configuration:
 
+[source,ruby]
+--------------------------------------------------
+
   jms {
           :
           [snip]
@@ -261,9 +258,8 @@ logstash configuration:
                       '/usr/share/jms/sol-jms-10.5.0.jar',
                       '/usr/share/jms/geronimo-jms_1.1_spec-1.1.1.jar',
                       '/usr/share/jms/commons-lang-2.6.jar']
-
   }
-
+--------------------------------------------------
 
 ==== Troubleshooting
 
@@ -272,29 +268,28 @@ logstash configuration:
 The most common issue is missing jar files, which may be jar files provided by the JMS vendor, or jar files that the JMS
  vendor requires to run. This issue can manifest in different ways, depending on where the missing jar file is discovered.
 
+Example log output:
 
-  Example log output:
-
-  ```
+-----
   Failed to load JMS Connection, likely because a JMS Provider is not on the Logstash classpath or correctly
   specified by the plugin's `require_jars` directive
   {:exception=>"cannot load Java class javax.jms.DeliveryMode"
-  ```
+-----
 
-  ```
+-----
     JMS Consumer Died {:exception=>"Java::JavaxNaming::NoInitialContextException",
                        :exception_message=>"Cannot instantiate class:"
-  ```
+-----
 
-  ```
+-----
   warning: thread "[main]<jms" terminated with exception (report_on_exception is true):
   java.lang.NoClassDefFoundError: org/apache/commons/lang/exception/NestableException
-  ```
+-----
 
-  ```
+-----
   JMS Consumer Died {:exception=>"Java::JavaxJms::JMSException", :exception_message=>"io/netty/channel/epoll/Epoll",
   :root_cause=>{:exception=>"Java::JavaLang::NoClassDefFoundError", :exception_message=>"io/netty/channel/epoll/Epoll"}
-  ```
+-----
 
 If any of these issues occur, check the list of `require_jars` in either the Logstash configuration or yaml configuration
   files.
