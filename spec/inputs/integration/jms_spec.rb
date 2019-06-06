@@ -72,6 +72,10 @@ shared_examples_for "a JMS input" do
           expect(queue.first.get('the_other')).to eq('the_other_prop')
         end
       end
+
+      context 'when delivery mode is set' do
+        let(:jms_config) { super.merge {} }
+      end
     end
 
     context 'when the message is map message' do

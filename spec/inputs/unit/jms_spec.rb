@@ -11,6 +11,29 @@ describe "inputs/jms" do
 
   describe 'initialization' do
 
+    context 'with System properties' do
+      let (:jms_config) {{ 'system_properties' => system_properties, 'destination' => 'ExampleQueue'}}
+      let (:system_properties) { { 'JNDI_Connection_Retries_Per_Host' => 7,
+                                   'JNDI_Connect_Retries' => 5 }}
+
+      before :each do
+        subject.register
+      end
+
+      after :each do
+        system_properties.each do |k, v|
+          java.lang.System.clear_property(k)
+        end
+      end
+
+      it 'should populate the system properties' do
+        system_properties.each do |k,v|
+          expect(java.lang.System.get_property(k)).to_not be_nil
+          expect(java.lang.System.get_property(k)).to eq(v.to_s)
+        end
+      end
+    end
+
     context 'configuration check' do
       context 'if threads is > 1' do
           let(:thread_count) { 2 }

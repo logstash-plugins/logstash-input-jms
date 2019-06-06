@@ -111,6 +111,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # contains details on how to connect to JNDI server
   config :jndi_context, :validate => :hash
 
+  config :system_properties, :validate => :hash
+
   config :keystore, :validate => :path
   config :keystore_password, :validate => :password
   config :truststore, :validate => :path
@@ -131,6 +133,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
     check_config
     load_ssl_properties
+    load_system_properties if @system_properties
 
     @jms_config = jms_config
 
@@ -181,6 +184,10 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     java.lang.System.setProperty("javax.net.ssl.keyStorePassword", @keystore_password.value) if @keystore_password
     java.lang.System.setProperty("javax.net.ssl.trustStore", @truststore) if @truststore
     java.lang.System.setProperty("javax.net.ssl.trustStorePassword", @truststore_password.value) if @truststore_password
+  end
+
+  def load_system_properties
+    @system_properties.each { |k,v| java.lang.System.set_property(k,v.to_s) }
   end
 
   def check_config
@@ -298,10 +305,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   def error_hash(e)
     error_hash = {:exception => e.class.name, :exception_message => e.message, :backtrace => e.backtrace}
     root_cause = get_root_cause(e)
-    unless root_cause.nil?
-      error_hash.merge!(:root_cause => root_cause)
-    end
-    error_hash
+    root_cause.nil? ? error_hash : error_hash.merge(:root_cause => root_cause)
   end
 
   # JMS Exceptions can contain chains of Exceptions, making it difficult to determine the root cause of an error

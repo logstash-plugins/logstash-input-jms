@@ -344,6 +344,7 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-selector>> |<<string,string>>|No
 | <<plugins-{type}s-{plugin}-skip_headers>> |<<array,array>>|No
 | <<plugins-{type}s-{plugin}-skip_properties>> |<<array,array>>|No
+| <<plugins-{type}s-{plugin}-system_properties>> |<<hash,hash>>|No
 | <<plugins-{type}s-{plugin}-threads>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-timeout>> |<<number,number>>|No
 | <<plugins-{type}s-{plugin}-truststore>> |a valid filesystem path|No
@@ -569,6 +570,14 @@ If `include_headers` is set, a list of headers to skip processing on can be spec
   * There is no default value for this setting.
 
 If `include_properties` is set, a list of properties to skip processing on can be specified here.
+
+[id="plugins-{type}s-{plugin}-system_properties"]
+===== `system_properties`
+
+  * Value type is <<hash,hash>>
+  * There is no default value for this setting.
+
+Any System properties that the JMS provider requires can be set either in a Hash here, or in `jvm.options`
 
 
 [id="plugins-{type}s-{plugin}-threads"]
