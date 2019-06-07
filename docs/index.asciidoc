@@ -79,22 +79,27 @@ Here is a config example to pull from a queue:
 ===== Sample Configuration for Non-JNDI Connection
 [source,ruby]
 --------------------------------------------------
- jms {
-    include_header => false <1>
-    include_properties => false <1>
-    include_body => true <1>
-    use_jms_timestamp => false <1>
-    interval => 10 <1>
-    destination => "myqueue" <1>
-    pub_sub => false <1>
-    username => xxxx <2>
-    password => xxxx <2>
-    factory => org.apache.activemq.ActiveMQConnectionFactory <3>
-    require_jars => ['/usr/share/jms/activemq-all-5.15.9.jar','/usr/share/jms/log4j-1.2.17.jar'] <4>
-  }
+ input {
+    jms {
+        broker_url => 'failover:(tcp://host1:61616,tcp://host2:61616)?initialReconnectDelay=100 <1>
+        include_header => false <1>
+        include_properties => false <1>
+        include_body => true <1>
+        use_jms_timestamp => false <1>
+        interval => 10 <1>
+        destination => "myqueue" <1>
+        pub_sub => false <1>
+        username => xxxx <2>
+        password => xxxx <2>
+        factory => org.apache.activemq.ActiveMQConnectionFactory <3>
+        require_jars => ['/usr/share/jms/activemq-all-5.15.9.jar','/usr/share/jms/log4j-1.2.17.jar'] <4>
+    }
+ }
 --------------------------------------------------
 
-<1> Configuration settings
+<1> Configuration settings. Note that here the `broker_url` definition includes a failover url. The syntax for the failover
+    url is defined by your JMS provider, and you should consult the documentation for your JMS provider for the exact
+    syntax.
 <2> Username and password for the connection.
 <3> Full name (including package name) of Java connection factory used to create a connection with your JMS provider.
 <4> List of jars required by the JMS provider. Paths should be the fully qualified location of all jar files required
@@ -104,29 +109,32 @@ Here is a config example to pull from a queue:
 ===== Sample Configuration for JNDI Connection
 [source,ruby]
 --------------------------------------------------
- jms {
-    include_header => false <1>
-    include_properties => false <1>
-    include_body => true <1>
-    use_jms_timestamp => false <1>
-    interval => 10 <1>
-    destination => "myqueue" <1>
-    pub_sub => false <1>
-    jndi_name => /jms/cf/default <2>
-    jndi_context => {
-     'java.naming.factory.initial' => com.solacesystems.jndi.SolJNDIInitialContextFactory
-     'java.naming.security.principal' => solace-cloud-client@user
-     'java.naming.provider.url' => tcp://address.messaging.solace.cloud:20608
-     'java.naming.security.credentials' => verysecret
-    } <3>
-    require_jars=> ['/usr/share/jms/commons-lang-2.6.jar',
-                    '/usr/share/jms/sol-jms-10.5.0.jar',
-                    '/usr/share/jms/geronimo-jms_1.1_spec-1.1.1.jar',
-                    '/usr/share/jms/commons-lang-2.6.jar]' <4>
-  }
+ input {
+    jms {
+        include_header => false <1>
+        include_properties => false <1>
+        include_body => true <1>
+        use_jms_timestamp => false <1>
+        interval => 10 <1>
+        destination => "myqueue" <1>
+        pub_sub => false <1>
+        jndi_name => /jms/cf/default <2>
+        jndi_context => {
+         'java.naming.factory.initial' => com.solacesystems.jndi.SolJNDIInitialContextFactory
+         'java.naming.security.principal' => solace-cloud-client@user
+         'java.naming.provider.url' => tcp://address.messaging.solace.cloud:20608
+         'java.naming.security.credentials' => verysecret
+        } <3>
+        require_jars=> ['/usr/share/jms/commons-lang-2.6.jar',
+                        '/usr/share/jms/sol-jms-10.5.0.jar',
+                        '/usr/share/jms/geronimo-jms_1.1_spec-1.1.1.jar',
+                        '/usr/share/jms/commons-lang-2.6.jar]' <4>
+    }
+ }
 --------------------------------------------------
 
-<1> Configuration settings
+<1> Configuration settings. Note that there is no `broker_url` or `username` or `password` defined here. These are
+    defined in the `jndi_context` hash.
 <2> Username and password for the connection.
 <3> JNDI context settings hash. Contains details of how to connect to JNDI server. See your JMS provider documentation for
      implementation specific details.
@@ -146,19 +154,21 @@ How you configure the `yaml` file depends on whether the connection is via JNDI:
 
 [source,ruby]
 --------------------------------------------------
- jms {
-    include_header => false <1>
-    include_properties => false <1>
-    include_body => true <1>
-    use_jms_timestamp => false <1>
-    interval => 10 <1>
-    destination => "myqueue" <1>
-    pub-sub => false <1>
-    username => xxxx <2>
-    password => xxxx <2>
-    yaml_file => "~/jms.yml"  <3>
-    yaml_section => "mybroker" <4>
-  }
+ input {
+    jms {
+        include_header => false <1>
+        include_properties => false <1>
+        include_body => true <1>
+        use_jms_timestamp => false <1>
+        interval => 10 <1>
+        destination => "myqueue" <1>
+        pub-sub => false <1>
+        username => xxxx <2>
+        password => xxxx <2>
+        yaml_file => "~/jms.yml"  <3>
+        yaml_section => "mybroker" <4>
+    }
+ }
 --------------------------------------------------
 
 
@@ -173,6 +183,7 @@ How you configure the `yaml` file depends on whether the connection is via JNDI:
 [source,yaml]
 --------------------------------------------------
 mybroker: <1>
+  :broker_url: 'ssl://localhost:61617' <1>
   :factory: org.apache.activemq.ActiveMQConnectionFactory <2>
   :send_timeout: 30000 <3>
   :exclusive_consumer: true <3>
@@ -200,17 +211,19 @@ The JMS plugin also supports connecting to brokers using JNDI. Configuration can
 
 [source,ruby]
 --------------------------------------------------
- jms {
-    include_header => false <1>
-    include_properties => false <1>
-    include_body => true <1>
-    use_jms_timestamp => false <1>
-    interval => 10 <1>
-    destination => "myqueue" <1>
-    pub-sub => false <1>
-    yaml_file => "~/jms.yml"  <2>
-    yaml_section => "mybroker" <3>
-  }
+ input {
+    jms {
+        include_header => false <1>
+        include_properties => false <1>
+        include_body => true <1>
+        use_jms_timestamp => false <1>
+        interval => 10 <1>
+        destination => "myqueue" <1>
+        pub-sub => false <1>
+        yaml_file => "~/jms.yml"  <2>
+        yaml_section => "mybroker" <3>
+    }
+ }
 --------------------------------------------------
 
 <1> Configuration settings
@@ -256,14 +269,16 @@ logstash configuration:
 [source,ruby]
 --------------------------------------------------
 
-  jms {
-          :
-          [snip]
-     require_jars => ['/usr/share/jms/commons-lang-2.6.jar',
-                      '/usr/share/jms/sol-jms-10.5.0.jar',
-                      '/usr/share/jms/geronimo-jms_1.1_spec-1.1.1.jar',
-                      '/usr/share/jms/commons-lang-2.6.jar']
-  }
+ input {
+    jms {
+              :
+              [snip]
+         require_jars => ['/usr/share/jms/commons-lang-2.6.jar',
+                          '/usr/share/jms/sol-jms-10.5.0.jar',
+                          '/usr/share/jms/geronimo-jms_1.1_spec-1.1.1.jar',
+                          '/usr/share/jms/commons-lang-2.6.jar']
+    }
+ }
 --------------------------------------------------
 
 ==== Troubleshooting
@@ -374,7 +389,7 @@ input plugins.
   * Value type is <<string,string>>
   * There is no default value for this setting.
 
-Url to use when connecting to the JMS provider.
+Url to use when connecting to the JMS provider. This is only relevant for non-JNDI configurations.
 
 [id="plugins-{type}s-{plugin}-destination"]
 ===== `destination` 
@@ -484,8 +499,9 @@ This parameter has non influence in the case of a subcribed Topic.
   * Value type is <<hash,hash>>
   * There is no default value for this setting.
 
-Mandatory if jndi lookup is being used.
-Contains details on how to connect to JNDI server.
+Only used if using JNDI lookup. Key value pairs to determine how to connect the JMS message brokers if JNDI
+is being used. Consult your JMS provider documentation for the correct values to use here.
+
 
 [id="plugins-{type}s-{plugin}-jndi_name"]
 ===== `jndi_name` 
@@ -493,7 +509,7 @@ Contains details on how to connect to JNDI server.
   * Value type is <<string,string>>
   * There is no default value for this setting.
 
-Name of JNDI entry at which the Factory can be found.
+Only used if using JNDI lookup. Name of JNDI entry at which the Factory can be found.
 
 [id="plugins-{type}s-{plugin}-keystore"]
 ===== `keystore`
@@ -520,6 +536,7 @@ Note, most .jks files created with keytool require a password
 
 Receive Oracle AQ buffered messages.
 In this mode persistent Oracle AQ JMS messages will not be received.
+Only for use with Oracle AQ
 
 [id="plugins-{type}s-{plugin}-password"]
 ===== `password` 
