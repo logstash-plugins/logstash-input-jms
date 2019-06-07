@@ -10,7 +10,6 @@ shared_examples_for "a JMS input" do
   context 'when inputting messages' do
     let (:destination) { "#{pub_sub ? 'topic' : 'queue'}://#{queue_name}"}
     let (:queue) { [] }
-    let (:topic_name) { SecureRandom.hex(8) }
 
     context 'when the message is a text message' do
       let(:message) { "Hello There" }
@@ -35,12 +34,121 @@ shared_examples_for "a JMS input" do
         end
       end
 
+      context 'when using message selectors' do
+        let (:jms_config) { super.merge({'selector' => selector }) }
+
+        context 'with multiple selector query parameter' do
+          let (:selector) { "this = 3 OR this = 4" }
+
+          it 'process messages that conform to the message selector' do
+            send_message do |session|
+              msg = session.message(message)
+              msg.set_string_property('that', 'that_prop')
+              msg.set_int_property('this', 4)
+              msg
+            end
+            expect(queue.first.get('message')).to eql (message)
+            expect(queue.first.get('this')).to eql(4)
+            expect(queue.first.get('that')).to eql('that_prop')
+          end
+
+          it 'does not process messages that do not conform to the message selector' do
+            send_message do |session|
+              msg = session.message(message)
+              msg.set_string_property('this', 'that_prop')
+              msg.set_string_property('that', 'this_prop')
+              msg
+            end
+            expect(queue.size).to be 0
+          end
+        end
+
+        context 'with an integer property' do
+          let (:selector) { "this < 4" }
+
+          it 'process messages that conform to the message selector' do
+            send_message do |session|
+              msg = session.message(message)
+              msg.set_string_property('that', 'that_prop')
+              msg.set_int_property('this', 3)
+              msg
+            end
+            expect(queue.first.get('message')).to eql (message)
+            expect(queue.first.get('this')).to eql(3)
+            expect(queue.first.get('that')).to eql('that_prop')
+          end
+
+          it 'does not process messages that do not conform to the message selector' do
+            send_message do |session|
+              msg = session.message(message)
+              msg.set_string_property('this', 'that_prop')
+              msg.set_string_property('that', 'this_prop')
+              msg
+            end
+            expect(queue.size).to be 0
+          end
+        end
+
+        context 'with a float property' do
+          let (:selector) { "this < 3.3" }
+
+          it 'process messages that conform to the message selector' do
+            send_message do |session|
+              msg = session.message(message)
+              msg.set_string_property('that', 'that_prop')
+              msg.set_float_property('this', 3.1)
+              msg
+            end
+            expect(queue.first.get('message')).to eql(message)
+            expect(queue.first.get('this')).to be_within(0.001).of(3.1)
+            expect(queue.first.get('that')).to eql('that_prop')
+          end
+
+          it 'does not process messages that do not conform to the message selector' do
+            send_message do |session|
+              msg = session.message(message)
+              msg.set_string_property('this', 'that_prop')
+              msg.set_string_property('that', 'this_prop')
+              msg
+            end
+            expect(queue.size).to be 0
+          end
+        end
+
+
+        context 'with a string property' do
+          let (:selector) { "this = 'this_prop'" }
+
+          it 'process messages that conform to the message selector' do
+            send_message do |session|
+              msg = session.message(message)
+              msg.set_string_property('this', 'this_prop')
+              msg.set_string_property('that', 'that_prop')
+              msg
+            end
+            expect(queue.first.get('message')).to eql (message)
+            expect(queue.first.get('this')).to eql('this_prop')
+            expect(queue.first.get('that')).to eql('that_prop')
+          end
+
+          it 'does not process messages that do not conform to the message selector' do
+            send_message do |session|
+              msg = session.message(message)
+              msg.set_string_property('this', 'that_prop')
+              msg.set_string_property('that', 'this_prop')
+              msg
+            end
+            expect(queue.size).to be 0
+          end
+
+        end
+      end
       context 'when headers are skipped' do
         let (:jms_config) { super.merge({'skip_headers' => ['jms_destination', 'jms_reply_to']})}
         it 'should skip the specified header and process other headers, properties and the message' do
           send_message do |session|
             msg = session.message(message)
-            msg.reply_to = session.create_destination(:topic_name => topic_name)
+            msg.reply_to = session.create_destination(:topic_name => SecureRandom.hex(8))
             msg.set_string_property('this', 'this_prop')
             msg.set_string_property('that', 'that_prop')
             msg.set_string_property('the_other', 'the_other_prop')
@@ -176,5 +284,4 @@ describe "input/jms", :integration => true do
       it_behaves_like 'a JMS input'
     end
   end
-
 end

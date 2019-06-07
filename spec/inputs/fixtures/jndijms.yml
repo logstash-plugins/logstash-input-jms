@@ -16,7 +16,6 @@ activemq:
   :username: user
   :password: password
   :broker_url: tcp://localhost:61616
-  :pub_sub: true
   :runner: consumer
   :factory: org.apache.activemq.ActiveMQConnectionFactory
   :require_jars:

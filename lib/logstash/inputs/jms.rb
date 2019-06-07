@@ -210,7 +210,6 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
       connection.start
       params = {:timeout => @timeout * 1000, :selector => @selector}
       subscriber = subscriber(session, params)
-
       until stop?
         # This will read from the queue/topic until :timeout is breached, or messages are available whichever comes
         # first.
@@ -293,7 +292,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
 
   def durable_subscriber(session, queue_or_topic, params)
-    params[:selector]  ? session.create_durable_subscriber(queue_or_topic, params[:selector], @durable_subscriber_name) :
+    params[:selector]  ? session.create_durable_subscriber(queue_or_topic, @durable_subscriber_name, params[:selector], false) :
                          session.create_durable_subscriber(queue_or_topic, @durable_subscriber_name)
   end
 

@@ -39,21 +39,24 @@ Here is a config example to pull from a queue:
 
 [source,ruby]
 ----
- jms {
-    broker_url => 'ssl://localhost:61617' <1>
-    destination => "myqueue" <2>
-    pub-sub => false <3>
-    username => <4>
-    password => <4>
-    keystore => <5>
-    keystore_password => <5>
-    truststore => <5>
-    truststore_password => <5>
-    include_header => false  <6>
-    include_properties => false <6>
-    include_body => true <6>
-    use_jms_timestamp => false <7>
-    selector => <8>
+ input
+ {
+    jms {
+       broker_url => 'ssl://localhost:61617' <1>
+       destination => "myqueue" <2>
+       pub-sub => false <3>
+       username => <4>
+       password => <4>
+       keystore => <5>
+       keystore_password => <5>
+       truststore => <5>
+       truststore_password => <5>
+       include_header => false  <6>
+       include_properties => false <6>
+       include_body => true <6>
+       use_jms_timestamp => false <7>
+       selector => "string_property = 'this' OR int_property < 3"
+    }
   }
 ----
 
@@ -66,7 +69,9 @@ Here is a config example to pull from a queue:
 <6> Parts of the JMS Message to include in the event - headers, properties and the message body can be included or
     excluded from the event.
 <7> Determines whether the JMSTimestamp header is used to populate the `@timestamp` field.
-<8> Message selector: <RB> TODO
+<8> Message selector: Use this to filter messages to be processed. The whole selector query should be double-quoted,
+    string property values should be single quoted, and numeric property vaues should not be quoted.
+    See JMS provider documentation for exact syntax.
 
 ==== Logstash Configuration
 
@@ -308,6 +313,14 @@ The use of multiple JMS consumers and producers in the same Logstash process is 
   * System properties need to be different for any of the consumers/producers
   * Different keystores or truststores are required for any of the consumers/producers
 
+===== Message Selectors unexpectedly filtering out all messages
+
+Incorrect message selector syntax can have two effects - either the syntax is incorrect and the selector parser from the
+JMS provider will throw an exception causing the plugin to fail OR the syntax will be accepted, but the messages will
+be silently dropped - this can happen with incorrect quoting of string properties in the selector definition. All
+selector definitions must be double quoted in the Logstash configuration file, and string property values must be
+single quoted, and numeric property values not quoted at all.
+
 
 [id="plugins-{type}s-{plugin}-options"]
 ==== Jms Input Configuration Options
@@ -548,7 +561,9 @@ java CLASSPATH prior to starting Logstash.
   * Value type is <<string,string>>
   * There is no default value for this setting.
 
-Set the selector to use to get messages off the queue or topic.
+JMS message selector. Use in conjunctions with message headers or properties to filter messages to be processed. Only
+messages that match the query specified here will be processed. Check with your JMS provider for the correct JMS message
+selector syntax.
 
 [id="plugins-{type}s-{plugin}-skip_headers"]
 ===== `skip_headers`
