@@ -33,78 +33,59 @@ JMS configurations can be done either entirely in the Logstash configuration fil
   configurations, should also use the combination of yaml file and Logstash configuration.
 
 
-==== Common Configuration Options
 
-Here is a config example to pull from a queue:
+==== Sample Configuration
 
-[source,ruby]
-----
- input
- {
-    jms {
-       broker_url => 'ssl://localhost:61617' <1>
-       destination => "myqueue" <2>
-       pub-sub => false <3>
-       username => <4>
-       password => <4>
-       keystore => <5>
-       keystore_password => <5>
-       truststore => <5>
-       truststore_password => <5>
-       include_header => false  <6>
-       include_properties => false <6>
-       include_body => true <6>
-       use_jms_timestamp => false <7>
-       selector => "string_property = 'this' OR int_property < 3"
-    }
-  }
-----
 
-<1> Url of the broker to connect to. Please consult your JMS provider documentation for the exact syntax to use
-    here, including how to enable failover.
-<2> Name of the topic or queue that the plugin will listen to events from.
-<3> Determines whether the event source is a queue or a topic, set to `true` for topic, `false` for queue.
-<4> Credentials to use when connecting to the JMS provider, if required.
-<5> Keystore and Truststore to use when connecting to the JMS provider, if required.
-<6> Parts of the JMS Message to include in the event - headers, properties and the message body can be included or
-    excluded from the event.
-<7> Determines whether the JMSTimestamp header is used to populate the `@timestamp` field.
-<8> Message selector: Use this to filter messages to be processed. The whole selector query should be double-quoted,
-    string property values should be single quoted, and numeric property vaues should not be quoted.
-    See JMS provider documentation for exact syntax.
-
-==== Logstash Configuration
-
+Configurations can be configured either entirely in Logstash configuration, or via a combination of Logstash configuration
+and yaml file, which can be useful for sharing similar configurations across multiple inputs and outputs.
+The JMS plugin can also be configured using JNDI if desired.
 
 ===== Sample Configuration for Non-JNDI Connection
 [source,ruby]
 --------------------------------------------------
- input {
+ input
+ {
     jms {
-        broker_url => 'failover:(tcp://host1:61616,tcp://host2:61616)?initialReconnectDelay=100 <1>
-        include_header => false <1>
-        include_properties => false <1>
-        include_body => true <1>
-        use_jms_timestamp => false <1>
-        interval => 10 <1>
-        destination => "myqueue" <1>
-        pub_sub => false <1>
-        username => xxxx <2>
-        password => xxxx <2>
-        factory => org.apache.activemq.ActiveMQConnectionFactory <3>
-        require_jars => ['/usr/share/jms/activemq-all-5.15.9.jar','/usr/share/jms/log4j-1.2.17.jar'] <4>
+       broker_url => 'failover:(tcp://host1:61616,tcp://host2:61616)?initialReconnectDelay=100 <1>
+       destination => 'myqueue' <2>
+       factory => 'org.apache.activemq.ActiveMQConnectionFactory' <3>
+       pub_sub => false <4>
+       username => 'username' <5>
+       password => 'secret' <5>
+       keystore => '/Users/logstash-user/security/keystore.jks' <6>
+       keystore_password => 'another_secret' <6>
+       truststore => '/Users/logstash-user/security/truststore.jks' <6>
+       truststore_password => 'yet_another_secret' <6>
+       include_header => false  <7>
+       include_properties => false <7>
+       include_body => true <7>
+       use_jms_timestamp => false <8>
+       selector => "string_property = 'this' OR int_property < 3" <9>
+       factory_settings => {
+                              exclusive_consumer => true
+       } <10>
+       require_jars => ['/usr/share/jms/activemq-all-5.15.9.jar'] <11>
     }
- }
+  }
 --------------------------------------------------
 
-<1> Configuration settings. Note that here the `broker_url` definition includes a failover url. The syntax for the failover
-    url is defined by your JMS provider, and you should consult the documentation for your JMS provider for the exact
-    syntax.
-<2> Username and password for the connection.
+<1> Url of the broker to connect to. Please consult your JMS provider documentation for the exact syntax to use
+    here, including how to enable failover.
+<2> Name of the topic or queue that the plugin will listen to events from.
 <3> Full name (including package name) of Java connection factory used to create a connection with your JMS provider.
-<4> List of jars required by the JMS provider. Paths should be the fully qualified location of all jar files required
+<4> Determines whether the event source is a queue or a topic, set to `true` for topic, `false` for queue.
+<5> Credentials to use when connecting to the JMS provider, if required.
+<6> Keystore and Truststore to use when connecting to the JMS provider, if required.
+<7> Parts of the JMS Message to include in the event - headers, properties and the message body can be included or
+    excluded from the event.
+<8> Determines whether the JMSTimestamp header is used to populate the `@timestamp` field.
+<9> Message selector: Use this to filter messages to be processed. The whole selector query should be double-quoted,
+    string property values should be single quoted, and numeric property vaues should not be quoted.
+    See JMS provider documentation for exact syntax.
+<10> Additional settings that are set directly on the ConnectionFactory object can be added here.
+<11> List of jars required by the JMS provider. Paths should be the fully qualified location of all jar files required
      by the JMS provider. This list may also include dependent jars as well as specific jars from the JMS provider.
-
 
 ===== Sample Configuration for JNDI Connection
 [source,ruby]
@@ -141,13 +122,8 @@ Here is a config example to pull from a queue:
 <4> List of jars required by the JMS provider. Paths should be the fully qualified location of all jar files required
      by the JMS provider. This list may also include dependent jars as well as specific jars from the JMS provider.
 
-==== Logstash Configuration and Yaml File
 
-
-How you configure the `yaml` file depends on whether the connection is via JNDI:
-
-
-===== Sample Configuration for Non-JNDI Connection
+===== Sample Configuration for Non-JNDI Connection using Logstash Configuration and Yaml file
 
 
 ====== Logstash Configuration
@@ -162,7 +138,7 @@ How you configure the `yaml` file depends on whether the connection is via JNDI:
         use_jms_timestamp => false <1>
         interval => 10 <1>
         destination => "myqueue" <1>
-        pub-sub => false <1>
+        pub_sub => false <1>
         username => xxxx <2>
         password => xxxx <2>
         yaml_file => "~/jms.yml"  <3>
@@ -185,7 +161,6 @@ How you configure the `yaml` file depends on whether the connection is via JNDI:
 mybroker: <1>
   :broker_url: 'ssl://localhost:61617' <1>
   :factory: org.apache.activemq.ActiveMQConnectionFactory <2>
-  :send_timeout: 30000 <3>
   :exclusive_consumer: true <3>
   :require_jars: <4>
     - /usr/share/jms/activemq-all-5.15.9.jar
@@ -202,7 +177,7 @@ mybroker: <1>
  <4> List of jars required by the JMS provider. Paths should be the fully qualified location of all jar files required
      by the JMS provider. This list may also include dependent jars as well as specific jars from the JMS provider.
 
-===== Sample Configuration for JNDI Connection
+===== Sample Configuration for JNDI Connection using Logstash Configuration and Yaml file
 
 The JMS plugin also supports connecting to brokers using JNDI. Configuration can be done either using a yaml file, or
  via the logstash configuration:
@@ -219,7 +194,7 @@ The JMS plugin also supports connecting to brokers using JNDI. Configuration can
         use_jms_timestamp => false <1>
         interval => 10 <1>
         destination => "myqueue" <1>
-        pub-sub => false <1>
+        pub_sub => false <1>
         yaml_file => "~/jms.yml"  <2>
         yaml_section => "mybroker" <3>
     }

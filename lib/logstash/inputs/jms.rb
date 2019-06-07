@@ -111,7 +111,11 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # contains details on how to connect to JNDI server
   config :jndi_context, :validate => :hash
 
+  # System properties
   config :system_properties, :validate => :hash
+
+  # Factory settings
+  config :factory_settings, :validate => :hash
 
   config :keystore, :validate => :path
   config :keystore_password, :validate => :password
@@ -134,7 +138,6 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     check_config
     load_ssl_properties
     load_system_properties if @system_properties
-
     @jms_config = jms_config
 
     @logger.debug("JMS Config being used ", :context => obfuscate_jms_config(@jms_config))
@@ -154,6 +157,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     jms_config_from_configuration
   end
 
+
   def jms_config_from_configuration
     config = {
         :require_jars => @require_jars,
@@ -163,9 +167,23 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
         :url => @broker_url # "broker_url" is named "url" with Oracle AQ
     }
     config.merge!(:password => @password.value) unless @password.nil?
+    config.merge!(correct_factory_hash(@factory_settings)) unless @factory_settings.nil?
     config
   end
 
+
+  # This method converts the factory_settings hash into one compatible with the library used which can then be used to
+  # set methods on the Java Connection Factory.
+  def correct_factory_hash(hash)
+    if hash.is_a?(String)
+      return true if hash.downcase.to_s == 'true'
+      return false if hash.downcase.to_s == 'false'
+    end
+    return hash unless hash.is_a?(Hash)
+    symbolized = {}
+    hash.each { |key, value| symbolized[key.to_sym] = correct_factory_hash(value) }
+    symbolized
+  end
 
   def jms_config_from_jndi
     {

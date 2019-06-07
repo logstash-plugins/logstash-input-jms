@@ -143,6 +143,7 @@ shared_examples_for "a JMS input" do
 
         end
       end
+
       context 'when headers are skipped' do
         let (:jms_config) { super.merge({'skip_headers' => ['jms_destination', 'jms_reply_to']})}
         it 'should skip the specified header and process other headers, properties and the message' do
@@ -179,10 +180,6 @@ shared_examples_for "a JMS input" do
           expect(queue.first.get('that')).to eq('that_prop')
           expect(queue.first.get('the_other')).to eq('the_other_prop')
         end
-      end
-
-      context 'when delivery mode is set' do
-        let(:jms_config) { super.merge {} }
       end
     end
 
