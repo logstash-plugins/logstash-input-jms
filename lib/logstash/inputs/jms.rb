@@ -166,23 +166,23 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
         :broker_url => @broker_url,
         :url => @broker_url # "broker_url" is named "url" with Oracle AQ
     }
-    config.merge!(:password => @password.value) unless @password.nil?
-    config.merge!(correct_factory_hash(@factory_settings)) unless @factory_settings.nil?
+
+    config[:password] = @password.value unless @password.nil?
+    correct_factory_hash(config, @factory_settings) unless @factory_settings.nil?
     config
   end
 
-
-  # This method converts the factory_settings hash into one compatible with the library used which can then be used to
-  # set methods on the Java Connection Factory.
-  def correct_factory_hash(hash)
+  def correct_factory_hash(original, value)
     if hash.is_a?(String)
-      return true if hash.downcase.to_s == 'true'
-      return false if hash.downcase.to_s == 'false'
+      return true if value.downcase == "true"
+      return false if value.downcase == "false"
     end
-    return hash unless hash.is_a?(Hash)
-    symbolized = {}
-    hash.each { |key, value| symbolized[key.to_sym] = correct_factory_hash(value) }
-    symbolized
+
+    if value.is_a?(Hash)
+      value.each { |key, value| original[key.to_sym] = correct_factory_hash({}, value) }
+      return original
+    end
+    value
   end
 
   def jms_config_from_jndi
@@ -303,7 +303,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
   def subscriber(session, params)
     destination_key = @pub_sub ? :topic_name : :queue_name
-    queue_or_topic = session.create_destination(params.merge({destination_key => @destination}))
+    params[destination_key] = @destination
+    queue_or_topic = session.create_destination(params)
     @durable_subscriber ? durable_subscriber(session, queue_or_topic, params) :
                           regular_subscriber(session, queue_or_topic, params)
   end
@@ -322,7 +323,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   def error_hash(e)
     error_hash = {:exception => e.class.name, :exception_message => e.message, :backtrace => e.backtrace}
     root_cause = get_root_cause(e)
-    root_cause.nil? ? error_hash : error_hash.merge(:root_cause => root_cause)
+    error_hash[:root_cause] = root_cause unless root_cause.nil?
+    error_hash
   end
 
   # JMS Exceptions can contain chains of Exceptions, making it difficult to determine the root cause of an error
@@ -344,5 +346,4 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     end
     {:exception => cause.class.name, :exception_message => cause.message }
   end
-
 end # class LogStash::Inputs::Jms
