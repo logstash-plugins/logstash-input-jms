@@ -116,7 +116,7 @@ The JMS plugin can also be configured using JNDI if desired.
 
 <1> Configuration settings. Note that there is no `broker_url` or `username` or `password` defined here. These are
     defined in the `jndi_context` hash.
-<2> Username and password for the connection.
+<2> JNDI name for this connection.
 <3> JNDI context settings hash. Contains details of how to connect to JNDI server. See your JMS provider documentation for
      implementation specific details.
 <4> List of jars required by the JMS provider. Paths should be the fully qualified location of all jar files required
@@ -125,6 +125,8 @@ The JMS plugin can also be configured using JNDI if desired.
 
 ===== Sample Configuration for Non-JNDI Connection using Logstash Configuration and Yaml file
 
+This section contains sample configurations for connecting to a JMS provider that is not using JNDI using a combination
+ of the Logstash configuration and the yaml file
 
 ====== Logstash Configuration
 
@@ -257,6 +259,8 @@ logstash configuration:
 --------------------------------------------------
 
 ==== Troubleshooting
+
+This section includes some common issues that a user may have when integrating this plugin with their JMS provider.
 
 ===== Missing Jar files
 
