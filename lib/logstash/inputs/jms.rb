@@ -331,7 +331,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # without knowing the actual root cause behind the problem.
   # This method protects against Java Exceptions where the cause methods loop. If there is a cause loop, the last
   # cause exception before the loop is detected will be returned, along with an entry in the root_cause hash indicating
-  # that an exception loop was detected.
+  # that an exception loop was detected. This will mean that the root cause may not be the actual root cause of the
+  # problem, and further investigation is required
   def get_root_cause(e)
     return nil unless e.respond_to?(:get_cause) && !e.get_cause.nil?
     cause = e
