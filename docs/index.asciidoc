@@ -139,7 +139,7 @@ The JMS plugin can also be configured using JNDI if desired.
 This section contains sample configurations for connecting to a JMS provider that is not using JNDI using a combination
  of the Logstash configuration and the yaml file
 
-====== Logstash Configuration
+===== Logstash Configuration
 
 [source,ruby]
 --------------------------------------------------
@@ -169,7 +169,7 @@ This section contains sample configurations for connecting to a JMS provider tha
 <4> Section name in the yaml file of the ConnectionFactory for this plugin definition
 
 
-====== YAML File Configuration
+===== YAML File Configuration
 
 [source,yaml]
 --------------------------------------------------
@@ -198,7 +198,7 @@ mybroker: <1>
 This section contains sample configurations for connecting to a JMS provider that is using JNDI using a combination
  of the Logstash configuration and the yaml file
 
-====== Logstash Configuration
+===== Logstash Configuration
 
 [source,ruby]
 --------------------------------------------------
@@ -256,7 +256,7 @@ In order to communicate with a JMS broker, the plugin must load the jar files ne
 This can be set in the yaml file, or in the main configuration if a yaml file is not necessary. The `require_jars`
   setting should include the full path for each jar file required for the client. Eg
 
-logstash configuration:
+===== Logstash configuration
 
 [source,ruby]
 --------------------------------------------------
