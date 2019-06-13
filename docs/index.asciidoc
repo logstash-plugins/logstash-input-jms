@@ -41,7 +41,7 @@ Configurations can be configured either entirely in Logstash configuration, or v
 and yaml file, which can be useful for sharing similar configurations across multiple inputs and outputs.
 The JMS plugin can also be configured using JNDI if desired.
 
-===== Non-JNDI Connection
+===== Logstash Confuguration for Non-JNDI Connection
 [source,ruby]
 --------------------------------------------------
  input
@@ -94,7 +94,7 @@ The JMS plugin can also be configured using JNDI if desired.
 <11> List of jars required by the JMS provider. Paths should be the fully qualified location of all jar files required
      by the JMS provider. This list may also include dependent jars as well as specific jars from the JMS provider.
 
-===== JNDI Connection
+===== Logstash Configuration for JNDI Connection
 [source,ruby]
 --------------------------------------------------
  input {
@@ -139,7 +139,7 @@ The JMS plugin can also be configured using JNDI if desired.
 This section contains sample configurations for connecting to a JMS provider that is not using JNDI using a combination
  of the Logstash configuration and the yaml file
 
-===== Logstash Configuration
+===== Logstash Configuration for Non-JNDI Connection (for configs including yaml)
 
 [source,ruby]
 --------------------------------------------------
@@ -169,27 +169,29 @@ This section contains sample configurations for connecting to a JMS provider tha
 <4> Section name in the yaml file of the ConnectionFactory for this plugin definition
 
 
-===== YAML File Configuration
+===== Yaml File for Non-JNDI Connection
 
 [source,yaml]
 --------------------------------------------------
 mybroker: <1>
-  :broker_url: 'ssl://localhost:61617' <1>
-  :factory: org.apache.activemq.ActiveMQConnectionFactory <2>
-  :exclusive_consumer: true <3>
-  :require_jars: <4>
+  :broker_url: 'ssl://localhost:61617' <2>
+  :factory: org.apache.activemq.ActiveMQConnectionFactory <3>
+  :exclusive_consumer: true <4>
+  :require_jars: <5>
     - /usr/share/jms/activemq-all-5.15.9.jar
     - /usr/share/jms/log4j-1.2.17.jar
 --------------------------------------------------
 
 <1> Section name for this broker definition. This should be the value of `yaml_section` in the logstash configuration file.
-<2> Full name (including package name) of Java connection factory used to create a connection with your JMS provider.
-<3> Implementation specific configuration parameters to be used with the connection factory specified
-    in <2>. Each JMS Provider will have its own set of parameters that can be used here. These parameters are mapped to
-    `set` methods on the provided connection factory, and can be supplied in either 'snake' or 'camel' case. In <3> above,
-    the `send_timeout` property will call the `setSendTimeout` on the supplied connection factory. See your JMS provider
+    Note that multiple sections can co-exist in the same yaml file.
+<2> Full url of the broker. See your JMS Provider documentation for details.
+<3> Full name (including package name) of Java connection factory used to create a connection with your JMS provider.
+<4> Implementation specific configuration parameters to be used with the connection factory specified.
+    in <3>. Each JMS Provider will have its own set of parameters that can be used here. These parameters are mapped to
+    `set` methods on the provided connection factory, and can be supplied in either 'snake' or 'camel' case. In <4> above,
+    the `exclusive_consumer` property will call the `setExclusiveConsumer` on the supplied connection factory. See your JMS provider
    documentation for implementation specific details.
-<4> List of jars required by the JMS provider. Paths should be the fully qualified location of all jar files required
+<5> List of jars required by the JMS provider. Paths should be the fully qualified location of all jar files required
     by the JMS provider. This list may also include dependent jars as well as specific jars from the JMS provider.
 
 
@@ -198,7 +200,7 @@ mybroker: <1>
 This section contains sample configurations for connecting to a JMS provider that is using JNDI using a combination
  of the Logstash configuration and the yaml file
 
-===== Logstash Configuration
+===== Logstash Configuration for JNDI Connection (for configs including yaml)
 
 [source,ruby]
 --------------------------------------------------
@@ -223,7 +225,7 @@ This section contains sample configurations for connecting to a JMS provider tha
 <3> Section name in the yaml file of the ConnectionFactory for this plugin definition
 
 
-===== YAML File Configuration
+===== Yaml File for JNDI Connection
 
 [source,yaml]
 --------------------------------------------------
@@ -284,22 +286,26 @@ The most common issue is missing jar files, which may be jar files provided by t
 
 Example log output:
 
+[source,txt]
 -----
   Failed to load JMS Connection, likely because a JMS Provider is not on the Logstash classpath or correctly
   specified by the plugin's `require_jars` directive
   {:exception=>"cannot load Java class javax.jms.DeliveryMode"
 -----
 
+[source,txt]
 -----
-    JMS Consumer Died {:exception=>"Java::JavaxNaming::NoInitialContextException",
-                       :exception_message=>"Cannot instantiate class:"
+  JMS Consumer Died {:exception=>"Java::JavaxNaming::NoInitialContextException",
+                     :exception_message=>"Cannot instantiate class:"
 -----
 
+[source,txt]
 -----
   warning: thread "[main]<jms" terminated with exception (report_on_exception is true):
   java.lang.NoClassDefFoundError: org/apache/commons/lang/exception/NestableException
 -----
 
+[source,txt]
 -----
   JMS Consumer Died {:exception=>"Java::JavaxJms::JMSException", :exception_message=>"io/netty/channel/epoll/Epoll",
   :root_cause=>{:exception=>"Java::JavaLang::NoClassDefFoundError", :exception_message=>"io/netty/channel/epoll/Epoll"}
