@@ -1,3 +1,15 @@
+## 3.1.0
+ - Added many improvements to plugin [#35](https://github.com/logstash-plugins/logstash-input-jms/pull/35), including:  
+   - Added support for TLS
+   - Added support for durable subscriptions
+   - Added support to skip processing of specified headers and properties
+   - Added Integration tests
+   - Added support for specifying system and connection factory settings in configuration
+   - Improved error handling and reporting
+   - Deprecated confusing runner settings, and simplified code.
+   - Improved unit test coverage
+   - Improved documentation with sample configurations and a basic troubleshooting guide
+
 ## 3.0.6
   - Fixed formatting issues in documentation [#32](https://github.com/logstash-plugins/logstash-input-jms/pull/32) and [#33](https://github.com/logstash-plugins/logstash-input-jms/pull/33]
 
