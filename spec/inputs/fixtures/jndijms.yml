@@ -1,0 +1,22 @@
+---
+solace:
+  :jndi_name: /jms/cf/default
+  :jndi_context:
+    java.naming.factory.initial: com.solacesystems.jndi.SolJNDIInitialContextFactory
+    java.naming.security.principal: username
+    java.naming.provider.url: tcp://localhost:20608
+    java.naming.security.credentials: password
+  :require_jars:
+    - commons-lang-2.6.jar
+    - sol-jms-10.5.0.jar
+    - geronimo-jms_1.1_spec-1.1.1.jar
+    - commons-lang-2.6.jar
+
+activemq:
+  :username: user
+  :password: password
+  :broker_url: tcp://localhost:61616
+  :runner: consumer
+  :factory: org.apache.activemq.ActiveMQConnectionFactory
+  :require_jars:
+    - activemq-all-5.15.8.jar
