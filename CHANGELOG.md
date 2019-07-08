@@ -1,3 +1,6 @@
+## 3.1.1
+ - Added documentation for `factory_settings` configuration setting [#36](https://github.com/logstash-plugins/logstash-input-jms/pull/36)
+
 ## 3.1.0
  - Added many improvements to plugin [#35](https://github.com/logstash-plugins/logstash-input-jms/pull/35), including:  
    - Added support for TLS
