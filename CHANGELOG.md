@@ -1,3 +1,6 @@
+## 3.1.2
+ - Docs: Added additional troubleshooting information [#38](https://github.com/logstash-plugins/logstash-input-jms/pull/38)
+
 ## 3.1.1
  - Added documentation for `factory_settings` configuration setting [#36](https://github.com/logstash-plugins/logstash-input-jms/pull/36)
 
