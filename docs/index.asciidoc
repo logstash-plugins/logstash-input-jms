@@ -335,10 +335,10 @@ selector definitions must be double quoted in the Logstash configuration file, a
 single quoted, and numeric property values not quoted at all.
 
 
-===== Failed to Create Event with MissingConverterException
+===== Failed to create Event with MissingConverterException
 
 Messages from certain JMS providers may contain headers or properties that Logstash cannot interpret, which can lead to
-error messages such as
+error messages such as:
 
 
 [source,txt]
@@ -352,9 +352,15 @@ Properties: nil, :exception=>org.logstash.MissingConverterException: Missing Con
 To get around this, use the `skip_headers` or `skip_properties` configuration setting to avoid attempting to process
 the offending header or property in the message.
 
-For example, in the example shown above, there is the attribute
-`:jms_reply_to=>#<Java::ComSolacesystemsJmsImpl::SolTopicImpl:0xdeadbeef>`, which is causing the
-`MissingConverterException`. To avoid this error, the configuration should include the following line:
+In the example shown above, this attribute is causing the
+`MissingConverterException`:
+
+[source,ruby]
+-----
+jms_reply_to=>#<Java::ComSolacesystemsJmsImpl::SolTopicImpl:0xdeadbeef>
+-----
+
+To avoid this error, the configuration should include the following line:
 
 [source,ruby]
 -----
