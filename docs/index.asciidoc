@@ -355,10 +355,8 @@ the offending header or property in the message.
 In the example shown above, this attribute is causing the
 `MissingConverterException`:
 
-[source,ruby]
------
-jms_reply_to=>#<Java::ComSolacesystemsJmsImpl::SolTopicImpl:0xdeadbeef>
------
+`jms_reply_to=>#<Java::ComSolacesystemsJmsImpl::SolTopicImpl:0xdeadbeef>`
+
 
 To avoid this error, the configuration should include the following line:
 
