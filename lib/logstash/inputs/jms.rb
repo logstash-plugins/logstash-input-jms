@@ -48,12 +48,12 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # If the JMS Message is a MapMessage, then all the key/value pairs will be added in the Hashmap of the event
   # StreamMessage and ObjectMessage are not supported
 
-  # Receive Oracle AQ buffered messages. 
+  # Receive Oracle AQ buffered messages.
   # In this mode persistent Oracle AQ JMS messages will not be received.
   config :oracle_aq_buffered_messages, :validate => :boolean, :default => false
 
   config :include_body, :validate => :boolean, :default => true
-  
+
   # Convert the JMSTimestamp header field to the @timestamp value of the event
   config :use_jms_timestamp, :validate => :boolean, :default => false
 
@@ -262,8 +262,9 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
             event.set(field.to_s, value) # TODO(claveau): needs codec.decode or converter.convert ?
           end
         elsif msg.java_kind_of?(JMS::TextMessage) || msg.java_kind_of?(JMS::BytesMessage)
-          unless msg.to_s.nil?
-            @codec.decode(msg.to_s) do |event_message|
+          text = msg.to_s
+          unless text.nil?
+            @codec.decode(text) do |event_message|
               event = event_message
             end
           end
