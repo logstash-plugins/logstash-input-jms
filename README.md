@@ -1,6 +1,6 @@
 # Logstash Plugin
 
-[![Travis Build Status](https://travis-ci.org/logstash-plugins/logstash-input-jms.svg)](https://travis-ci.org/logstash-plugins/logstash-input-jms)
+[![Travis Build Status](https://travis-ci.com/logstash-plugins/logstash-input-jms.svg)](https://travis-ci.com/logstash-plugins/logstash-input-jms)
 
 This is a plugin for [Logstash](https://github.com/elastic/logstash).
 
