@@ -430,6 +430,8 @@ Url to use when connecting to the JMS provider. This is only relevant for non-JN
 
 Name of the destination queue or topic to use.
 
+* Note that in some cases, it might be necessary to specify the `destination` in the format `<JMS module name>!<JMS queue name>`
+
 [id="plugins-{type}s-{plugin}-durable_subscriber"]
 ===== `durable_subscriber`
 
