@@ -199,6 +199,19 @@ describe "inputs/jms" do
     end
   end
 
+  describe '#set_field' do
+    let(:event) { LogStash::Event.new }
+    it 'should set the field correctly' do
+      plugin.set_field(event, "hello", "fff")
+      expect(event.get("hello")).to eql("fff")
+    end
+
+    it 'should set handle field values that are not convertible' do
+      plugin.set_field(event, "hello", Date.new(1999,1,1))
+      expect(event.get("hello")).to eql("1999-01-01")
+    end
+  end
+
   describe '#error_hash' do
     context 'should handle Java exceptions with a chain of causes' do
       let (:raised) { java.lang.Exception.new("Outer", java.lang.RuntimeException.new("middle", java.io.IOException.new("Inner")))}

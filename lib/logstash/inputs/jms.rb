@@ -281,13 +281,13 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
       if @include_header
         msg.attributes && msg.attributes.each do |field, value|
-          event.set(field.to_s, value) unless @skip_headers.include?(field.to_s)
+          set_field(event, field.to_s, value) unless @skip_headers.include?(field.to_s)
         end
       end
 
       if @include_properties
         msg.properties && msg.properties.each do |field, value|
-          event.set(field.to_s, value) unless @skip_properties.include?(field.to_s)
+          set_field(event, field.to_s, value) unless @skip_properties.include?(field.to_s)
         end
       end
 
@@ -300,6 +300,17 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     end
   end
 
+  def set_field(event, field, value)
+    begin
+      event.set(field, value)
+    rescue Java::JavaLang::RuntimeException => e # Using RuntimeException as a common ancestor to MissingConverterException
+                                                 # And IllegalArgumentException, which are used across different
+                                                 # Logstash versions for Valuefier errors
+      logger.warn("Unable to convert value of type #{value.class} for field #{field}, falling back to using string representation",
+                 :exception => e)
+      event.set(field, value.to_s)
+    end
+  end
 
   def subscriber(session, params)
     destination_key = @pub_sub ? :topic_name : :queue_name
