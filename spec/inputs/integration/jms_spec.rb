@@ -1,7 +1,5 @@
 require_relative '../spec_helper'
 require 'logstash/inputs/jms'
-require 'jms'
-require 'json'
 require 'securerandom'
 
 shared_examples_for "a JMS input" do
