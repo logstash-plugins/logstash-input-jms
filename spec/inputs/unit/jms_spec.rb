@@ -37,10 +37,10 @@ describe "inputs/jms" do
     context 'configuration check' do
       context 'if threads is > 1' do
           let(:thread_count) { 2 }
-          let(:jms_config) { super.merge({'threads' => thread_count})}
+          let(:jms_config) { super().merge({'threads' => thread_count})}
 
           context 'with pub_sub set to true' do
-            let(:jms_config) { super.merge({'pub_sub' => true})}
+            let(:jms_config) { super().merge({'pub_sub' => true})}
 
             it 'should raise a configuration error' do
               expect { plugin.register }.to raise_error(LogStash::ConfigurationError)
@@ -48,7 +48,7 @@ describe "inputs/jms" do
           end
 
           context 'with pub_sub set to false' do
-            let(:jms_config) { super.merge({'pub_sub' => false})}
+            let(:jms_config) { super().merge({'pub_sub' => false})}
 
             it 'should not raise a configuration error' do
               plugin.register
@@ -58,13 +58,13 @@ describe "inputs/jms" do
       end
 
       context 'with durable_subscriber set' do
-        let(:jms_config) { super.merge({ 'pub_sub' => true,
+        let(:jms_config) { super().merge({ 'pub_sub' => true,
                                          'durable_subscriber' => true,
                                          'durable_subscriber_name' => SecureRandom.hex(8),
                                          'durable_subscriber_client_id' => SecureRandom.hex(8)})}
 
         context 'if durable_subscriber_client_id is not set' do
-          let(:jms_config) { super.tap { |h| h.delete('durable_subscriber_client_id') } }
+          let(:jms_config) { super().tap { |h| h.delete('durable_subscriber_client_id') } }
 
           it 'should set client_id to Logstash' do
             plugin.register
@@ -73,7 +73,7 @@ describe "inputs/jms" do
         end
 
         context 'if durable_subscriber_name is not set' do
-          let(:jms_config) { super.tap { |h| h.delete('durable_subscriber_name') } }
+          let(:jms_config) { super().tap { |h| h.delete('durable_subscriber_name') } }
 
           it 'should set name to the topic name' do
             plugin.register
@@ -83,7 +83,7 @@ describe "inputs/jms" do
 
 
         context 'if pub_sub is set to false' do
-          let(:jms_config) { super.merge({'pub_sub' => false})}
+          let(:jms_config) { super().merge({'pub_sub' => false})}
           it 'should raise a configuration error' do
             expect { plugin.register }.to raise_error(LogStash::ConfigurationError)
           end

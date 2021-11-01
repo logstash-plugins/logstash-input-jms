@@ -4,8 +4,6 @@ require 'jms'
 require 'json'
 require 'securerandom'
 
-
-
 shared_examples_for "a JMS input" do
   context 'when inputting messages' do
     let (:destination) { "#{pub_sub ? 'topic' : 'queue'}://#{queue_name}"}
@@ -15,7 +13,7 @@ shared_examples_for "a JMS input" do
       let(:message) { "Hello There" }
 
       context 'when properties are skipped' do
-        let (:jms_config) { super.merge({'skip_properties' => ['this', 'that']})}
+        let (:jms_config) { super().merge({'skip_properties' => ['this', 'that']})}
 
         it 'should skip the specified property and process other properties, headers and the message' do
           send_message do |session|
@@ -35,7 +33,7 @@ shared_examples_for "a JMS input" do
       end
 
       context 'when using message selectors' do
-        let (:jms_config) { super.merge({'selector' => selector }) }
+        let (:jms_config) { super().merge({'selector' => selector }) }
 
         context 'with multiple selector query parameter' do
           let (:selector) { "this = 3 OR this = 4" }
@@ -145,7 +143,7 @@ shared_examples_for "a JMS input" do
       end
 
       context 'when headers are skipped' do
-        let (:jms_config) { super.merge({'skip_headers' => ['jms_destination', 'jms_reply_to']})}
+        let (:jms_config) { super().merge({'skip_headers' => ['jms_destination', 'jms_reply_to']})}
         it 'should skip the specified header and process other headers, properties and the message' do
           send_message do |session|
             msg = session.message(message)
@@ -241,7 +239,7 @@ describe "input/jms", :integration => true do
     end
 
     context 'with pub_sub true and durable subscriber' do
-      let (:jms_config) { super.merge({'durable_subscriber' => true,
+      let (:jms_config) { super().merge({'durable_subscriber' => true,
                            'durable_subscriber_client_id' => SecureRandom.hex(8),
                            'durable_subscriber_name' => SecureRandom.hex(8) } ) }
 
@@ -258,7 +256,7 @@ describe "input/jms", :integration => true do
 
   context 'with tls', :tls => true do
     let (:yaml_section) { 'activemq_tls' }
-    let (:jms_config) { super.merge({"keystore" => fixture_path("keystore.jks"), "keystore_password" => "changeit",
+    let (:jms_config) { super().merge({"keystore" => fixture_path("keystore.jks"), "keystore_password" => "changeit",
                                      "truststore" => fixture_path("keystore.jks"), "truststore_password" => "changeit"})}
 
     context 'with pub_sub true' do
@@ -267,7 +265,7 @@ describe "input/jms", :integration => true do
     end
 
     context 'with pub_sub true and durable subscriber' do
-      let (:jms_config) { super.merge({'durable_subscriber' => true,
+      let (:jms_config) { super().merge({'durable_subscriber' => true,
                            'durable_subscriber_client_id' => SecureRandom.hex(8),
                            'durable_subscriber_name' => SecureRandom.hex(8) } ) }
 
