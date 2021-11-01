@@ -1,7 +1,6 @@
 require_relative '../spec_helper'
 require 'logstash/inputs/jms'
-require 'jms'
-require 'json'
+require 'securerandom'
 
 describe "inputs/jms" do
   let (:queue_name) {SecureRandom.hex(8)}
