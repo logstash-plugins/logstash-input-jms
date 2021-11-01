@@ -4,8 +4,6 @@ require 'jms'
 require 'json'
 require 'securerandom'
 
-
-
 shared_examples_for "a JMS input" do
   context 'when inputting messages' do
     let (:destination) { "#{pub_sub ? 'topic' : 'queue'}://#{queue_name}"}
