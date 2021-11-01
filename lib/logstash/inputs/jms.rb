@@ -4,6 +4,8 @@ require "logstash/inputs/threadable"
 require 'java'
 require "logstash/namespace"
 
+require 'logstash/plugin_mixins/event_support/event_factory_adapter'
+
 # Read events from a Jms Broker. Supports both Jms Queues and Topics.
 #
 # For more information about Jms, see <http://docs.oracle.com/javaee/6/tutorial/doc/bncdq.html>
@@ -23,6 +25,9 @@ require "logstash/namespace"
 #
 #
 class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
+
+  include LogStash::PluginMixins::EventSupport::EventFactoryAdapter
+
   config_name "jms"
 
   # A JMS message has three parts :
@@ -257,23 +262,15 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     begin
       if @include_body
         if msg.java_kind_of?(JMS::MapMessage)
-          event = LogStash::Event.new
-          msg.data.each do |field, value|
-            event.set(field.to_s, value) # TODO(claveau): needs codec.decode or converter.convert ?
-          end
+          event = process_map_message(msg)
         elsif msg.java_kind_of?(JMS::TextMessage) || msg.java_kind_of?(JMS::BytesMessage)
-          text = msg.to_s
-          unless text.nil?
-            @codec.decode(text) do |event_message|
-              event = event_message
-            end
-          end
+          event = decode_message(msg)
         else
           @logger.error( "Unsupported message type #{msg.data.class.to_s}" )
         end
       end
 
-      event ||= LogStash::Event.new
+      event ||= event_factory.new_event
 
       # Here, we can use the JMS Enqueue timestamp as the @timestamp
       if @use_jms_timestamp && msg.jms_timestamp
@@ -301,6 +298,21 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     end
   end
 
+  # @param msg [JMS::MapMessage]
+  # @return [LogStash::Event]
+  def process_map_message(msg)
+    data = msg.data.inject({}) { |hash, (key, val)| hash[key.to_s] = val; hash }
+    event_factory.new_event(data)
+  end
+
+  # @param msg [JMS::TextMessage, JMS::BytesMessage]
+  # @return [LogStash::Event, nil]
+  def decode_message(msg)
+    text = msg.to_s # javax.jms.TextMessage#getText (e.g. JSON payload)
+    event = nil
+    @codec.decode(text) { |e| event = e } unless text.nil?
+    event
+  end
 
   def subscriber(session, params)
     destination_key = @pub_sub ? :topic_name : :queue_name
