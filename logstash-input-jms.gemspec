@@ -19,16 +19,16 @@ Gem::Specification.new do |s|
   # Special flag to let us know this is actually a logstash plugin
   s.metadata = { "logstash_plugin" => "true", "logstash_group" => "input" }
 
+  s.platform = RUBY_PLATFORM
+
   # Gem dependencies
   s.add_runtime_dependency "logstash-core-plugin-api", ">= 1.60", "<= 2.99"
   s.add_runtime_dependency 'logstash-codec-json', '~> 3.0'
   s.add_runtime_dependency 'logstash-codec-plain', '~> 3.0'
   s.add_runtime_dependency "logstash-mixin-event_support", '~> 1.0'
+
+  s.add_runtime_dependency "jruby-jms", ">= 1.2.0" #(Apache 2.0 license)
   s.add_runtime_dependency 'semantic_logger', '< 4.0.0'
 
-  if RUBY_PLATFORM == 'java'
-    s.platform = RUBY_PLATFORM
-    s.add_runtime_dependency "jruby-jms", ">= 1.2.0" #(Apache 2.0 license)
-  end
   s.add_development_dependency 'logstash-devutils'
 end
