@@ -5,7 +5,7 @@ env
 
 set -ex
 
-export ACTIVEMQ_VERSION=5.15.9
+export ACTIVEMQ_VERSION=5.15.15
 ./setup_broker.sh
 bundle install
 bundle exec rspec
