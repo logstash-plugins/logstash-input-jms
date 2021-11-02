@@ -252,4 +252,13 @@ describe "inputs/jms" do
       end
     end
   end
+
+  context 'invalid configuration' do
+    let (:jms_config) { super().merge('include_headers' => true, 'include_header' => false) }
+
+    it 'should raise a configuration error' do
+      expect { subject.register }.to raise_error LogStash::ConfigurationError,
+                                                 /Both `include_headers => true` and `include_header => false` options are specified/i
+    end
+  end
 end

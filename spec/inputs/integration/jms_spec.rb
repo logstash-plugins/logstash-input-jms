@@ -141,7 +141,8 @@ shared_examples_for "a JMS input" do
       end
 
       context 'when headers are skipped' do
-        let (:jms_config) { super().merge({'skip_headers' => ['jms_destination', 'jms_reply_to']})}
+        let (:jms_config) { super().merge('skip_headers' => ['jms_destination', 'jms_reply_to']) }
+
         it 'should skip the specified header and process other headers, properties and the message' do
           send_message do |session|
             msg = session.message(message)
@@ -160,21 +161,51 @@ shared_examples_for "a JMS input" do
         end
       end
 
+      context 'when include_headers => false' do
+        let (:jms_config) { super().merge('include_headers' => 'false') }
+
+        it 'should skip all headers' do
+          send_message do |session|
+            msg = session.message(message)
+            msg.reply_to = session.create_destination(:topic_name => SecureRandom.hex(8))
+            msg.set_string_property('some', 'property')
+            msg
+          end
+          event = queue.first.to_hash_with_metadata
+          expect( event.keys.find { |name| name.start_with?('jms_') } ).to be nil
+        end
+      end
+
+      context 'when include_header => false (deprecated)' do
+        let (:jms_config) { super().merge('include_header' => 'false') }
+
+        it 'should skip all headers' do
+          send_message do |session|
+            msg = session.message(message)
+            msg.reply_to = session.create_destination(:topic_name => SecureRandom.hex(8))
+            msg.set_string_property('some', 'property')
+            msg
+          end
+          event = queue.first.to_hash_with_metadata
+          expect( event.keys.find { |name| name.start_with?('jms_') } ).to be nil
+        end
+      end
+
       context 'when neither header nor property is skipped ' do
         it 'should process properties, headers and the message' do
           send_message do |session|
             msg = session.message(message)
             msg.set_string_property('this', 'this_prop')
-            msg.set_string_property('that', 'that_prop')
-            msg.set_string_property('the_other', 'the_other_prop')
+            msg.set_int_property('camelCase', 42)
+            msg.set_boolean_property('JMSFlag', true)
             msg
           end
           expect(queue.first.get('message')).to eql (message)
           expect(queue.first.get('jms_timestamp')).to_not be_nil
           expect(queue.first.get('jms_destination')).to_not be_nil
           expect(queue.first.get('this')).to eq('this_prop')
-          expect(queue.first.get('that')).to eq('that_prop')
-          expect(queue.first.get('the_other')).to eq('the_other_prop')
+          expect(queue.first.get('camelCase')).to eq(42)
+          expect(queue.first.get('JMSFlag')).to be true
         end
       end
     end

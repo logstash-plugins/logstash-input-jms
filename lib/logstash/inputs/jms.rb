@@ -37,7 +37,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # You can tell the input plugin which parts should be included in the event produced by Logstash
   #
   # Include JMS Message Header Field values in the event
-  config :include_header, :validate => :boolean, :default => true
+  config :include_header, :validate => :boolean, :default => false, :deprecated => "Set 'include_headers => ...' instead"
+  config :include_headers, :validate => :boolean, :default => true
   # Include JMS Message Properties Field values in the event
   config :include_properties, :validate => :boolean, :default => true
 
@@ -140,7 +141,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   def register
     require "jms"
 
-    check_config
+    check_config!
     load_ssl_properties
     load_system_properties if @system_properties
     @jms_config = jms_config
@@ -213,7 +214,15 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     @system_properties.each { |k,v| java.lang.System.set_property(k,v.to_s) }
   end
 
-  def check_config
+  def check_config!
+    if original_params.include?('include_header')
+      if original_params.include?('include_headers')
+        raise(LogStash::ConfigurationError, "Both `include_headers => #{include_headers}` and `include_header => #{include_header}`" +
+                                            " options are specified, please only set one")
+      end
+      @include_headers = include_header # only `include_header => ...` was set
+    end
+
     check_durable_subscription_config
     raise(LogStash::ConfigurationError, "Threads cannot be > 1 if pub_sub is set") if @threads > 1 && @pub_sub
   end
