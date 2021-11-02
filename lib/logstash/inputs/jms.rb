@@ -4,7 +4,9 @@ require "logstash/inputs/threadable"
 require 'java'
 require "logstash/namespace"
 
+require 'logstash/plugin_mixins/ecs_compatibility_support'
 require 'logstash/plugin_mixins/event_support/event_factory_adapter'
+require 'logstash/plugin_mixins/validator_support/field_reference_validation_adapter'
 
 # Read events from a Jms Broker. Supports both Jms Queues and Topics.
 #
@@ -12,7 +14,7 @@ require 'logstash/plugin_mixins/event_support/event_factory_adapter'
 # For more information about the Ruby Gem used, see <http://github.com/reidmorrison/jruby-jms>
 # Here is a config example to pull from a queue:
 #  jms {
-#     include_header => false
+#     include_headers => false
 #     include_properties => false
 #     include_body => true
 #     use_jms_timestamp => false
@@ -26,7 +28,10 @@ require 'logstash/plugin_mixins/event_support/event_factory_adapter'
 #
 class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
+  include LogStash::PluginMixins::ECSCompatibilitySupport(:disabled, :v1, :v8 => :v1)
   include LogStash::PluginMixins::EventSupport::EventFactoryAdapter
+
+  extend LogStash::PluginMixins::ValidatorSupport::FieldReferenceValidationAdapter
 
   config_name "jms"
 
@@ -128,6 +133,15 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   config :truststore, :validate => :path
   config :truststore_password, :validate => :password
 
+  # Defines a target field for placing fields.
+  # If this setting is omitted, data gets stored at the root (top level) of the event.
+  # The target is only relevant while decoding data into a new event.
+  #
+  # NOTE: this is only relevant for map messages, byte[] and string use the codec!
+  config :target, :validate => :field_reference
+
+  config :headers_target, :validate => :field_reference # ECS default: [@metadata][input][jms][headers]
+  config :properties_target, :validate => :field_reference # ECS default: [@metadata][input][jms][properties]
 
   # :yaml_file, :factory and :jndi_name are mutually exclusive, both cannot be supplied at the
   # same time. The priority order is :yaml_file, then :jndi_name, then :factory
@@ -138,6 +152,22 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # For some known examples, see: [Example jms.yml](https://github.com/reidmorrison/jruby-jms/blob/master/examples/jms.yml)
 
   public
+
+  def initialize(*params)
+    super
+
+    unless original_params.include?('headers_target')
+      @headers_target = ecs_select[disabled: nil, v1: '[@metadata][input][jms][headers]']
+    end
+
+    unless original_params.include?('properties_target')
+      @properties_target = ecs_select[disabled: nil, v1: '[@metadata][input][jms][properties]']
+    end
+
+    @headers_setter = event_setter_for(@headers_target)
+    @properties_setter = event_setter_for(@properties_target)
+  end
+
   def register
     require "jms"
 
@@ -266,7 +296,6 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     end
   end # def run_consumer
 
-
   def queue_event(msg, output_queue)
     begin
       if @include_body
@@ -286,16 +315,18 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
         event.set("@timestamp", LogStash::Timestamp.at(msg.jms_timestamp / 1000, (msg.jms_timestamp % 1000) * 1000))
       end
 
-      if @include_header
-        msg.attributes && msg.attributes.each do |field, value|
-          event.set(field.to_s, value) unless @skip_headers.include?(field.to_s)
-        end
+      if @include_headers
+        # JMS gem gives us dasherized jms_xxx attribute names e.g.
+        #   jms_message_id, jms_destination, jms_delivery_mode_sym
+        headers = to_string_keyed_hash(msg.attributes)
+        @skip_headers.each { |key| headers.delete(key) }
+        @headers_setter.call(event, headers)
       end
 
       if @include_properties
-        msg.properties && msg.properties.each do |field, value|
-          event.set(field.to_s, value) unless @skip_properties.include?(field.to_s)
-        end
+        properties = to_string_keyed_hash(msg.properties)
+        @skip_properties.each { |key| properties.delete(key) }
+        @properties_setter.call(event, properties)
       end
 
       decorate(event)
@@ -307,11 +338,15 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     end
   end
 
+  def to_string_keyed_hash(hash)
+    hash.inject({}) { |h, (key, val)| h[key.to_s] = val; h }
+  end
+
   # @param msg [JMS::MapMessage]
   # @return [LogStash::Event]
   def process_map_message(msg)
-    data = msg.data.inject({}) { |hash, (key, val)| hash[key.to_s] = val; hash }
-    event_factory.new_event(data)
+    data = to_string_keyed_hash(msg.data)
+    targeted_event_factory.new_event(data)
   end
 
   # @param msg [JMS::TextMessage, JMS::BytesMessage]
@@ -369,4 +404,31 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     end
     {:exception => cause.class.name, :exception_message => cause.message }
   end
+
+  private
+
+  def event_setter_for(target)
+    if target.nil? || target.empty?
+      TOP_LEVEL_EVENT_SETTER
+    else
+      TargetEventSetter.new(target)
+    end
+  end
+
+  TOP_LEVEL_EVENT_SETTER = lambda { |event, data| data.each { |key, val| event.set(key, val) } }
+  private_constant :TOP_LEVEL_EVENT_SETTER
+
+  class TargetEventSetter
+
+    def initialize(target)
+      @target = target
+    end
+
+    def call(event, data)
+      event.set(@target, data)
+    end
+
+  end
+  private_constant :TargetEventSetter
+
 end # class LogStash::Inputs::Jms
