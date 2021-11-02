@@ -1,3 +1,6 @@
+## 3.2.0
+ - Feat: event_factory support + targets to aid ECS [#49](https://github.com/logstash-plugins/logstash-input-jms/pull/49)
+
 ## 3.1.2
  - Docs: Added additional troubleshooting information [#38](https://github.com/logstash-plugins/logstash-input-jms/pull/38)
 
@@ -45,7 +48,7 @@
  - New dependency requirements for logstash-core for the 5.0 release
 
 ## 2.0.0
- - Plugins were updated to follow the new shutdown semantic, this mainly allows Logstash to instruct input plugins to terminate gracefully, 
+ - Plugins were updated to follow the new shutdown semantic, this mainly allows Logstash to instruct input plugins to terminate gracefully,
    instead of using Thread.raise on the plugins' threads. Ref: https://github.com/elastic/logstash/pull/3895
  - Dependency on logstash-core update to 2.0
 
