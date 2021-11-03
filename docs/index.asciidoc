@@ -37,6 +37,8 @@ JMS configurations can be done either entirely in the Logstash configuration fil
 
 JMS data is application specific. ECS compliance for fields depends on the use case.
 The plugin includes sensible defaults that change based on <<plugins-{type}s-{plugin}-ecs_compatibility,ECS compatibility mode>>.
+When ECS compatibility is disabled, headers, properties, and payload are targeted at the root level of the event to maintain compatibility with legacy usage of this plugin.
+When targeting an ECS version, headers and properties target `@metadata` sub-fields unless configured otherwise in order to avoid conflict with ECS fields.
 See <<plugins-{type}s-{plugin}-headers_target>>, <<plugins-{type}s-{plugin}-properties_target>> and <<plugins-{type}s-{plugin}-target>>.
 
 ==== Sample Configuration using Logstash Configuration Only
