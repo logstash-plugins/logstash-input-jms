@@ -5,6 +5,7 @@ require 'java'
 require "logstash/namespace"
 
 require 'logstash/plugin_mixins/ecs_compatibility_support'
+require 'logstash/plugin_mixins/ecs_compatibility_support/target_check'
 require 'logstash/plugin_mixins/event_support/event_factory_adapter'
 require 'logstash/plugin_mixins/validator_support/field_reference_validation_adapter'
 
@@ -338,12 +339,28 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   def to_string_keyed_hash(hash)
     hash.inject({}) { |h, (key, val)| h[key.to_s] = val; h }
   end
+  private :to_string_keyed_hash
 
   # @param msg [JMS::MapMessage]
   # @return [LogStash::Event]
   def process_map_message(msg)
     data = to_string_keyed_hash(msg.data)
-    targeted_event_factory.new_event(data)
+    do_target_check_once_and_get_event_factory.new_event(data)
+  end
+
+  def do_target_check_once_and_get_event_factory
+    @target_checked ||= begin
+                          do_target_check
+                          targeted_event_factory
+                        end
+  end
+
+  TARGET_NOT_SET_MESSAGE = LogStash::PluginMixins::ECSCompatibilitySupport::TargetCheck::TARGET_NOT_SET_MESSAGE
+
+  def do_target_check
+    return true unless target.nil?
+    return nil if ecs_compatibility == :disabled
+    logger.info(TARGET_NOT_SET_MESSAGE) # target isn't set in ECS mode
   end
 
   # @param msg [JMS::TextMessage, JMS::BytesMessage]

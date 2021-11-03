@@ -240,14 +240,40 @@ shared_examples_for "a JMS input" do
       end
     end
 
-    context 'when the message is map message' do
-      let(:message) { {:one => 1} }
-      it 'should read the message' do
-        send_message
-        expect(queue.size).to eql 1
-        expect(queue.first.get('one')).to eql 1
-        expect(queue.first.get("jms_destination")).to eql(destination)
+    context 'when the message is map message', :ecs_compatibility_support do
+
+      ecs_compatibility_matrix(:disabled, :v1, :v8) do |ecs_select|
+
+        let(:ecs_compatibility?) { ecs_select.active_mode != :disabled }
+
+        let (:config) { super().merge('ecs_compatibility' => ecs_select.active_mode) }
+
+        let(:message) { {:one => 1} }
+
+        before do
+          if ecs_compatibility?
+            expect(subject.logger).to receive(:info).once.with /ECS compatibility is enabled but `target` option was not specified/i
+          end
+        end
+
+        it 'should read the message' do
+          send_message
+
+          expect(queue.size).to eql 1
+          event = queue.first
+          expect(event.get('one')).to eql 1
+
+          if ecs_compatibility?
+            expect(event.get('[@metadata][input][jms][headers][jms_destination]')).to eql(destination)
+          else
+            expect(event.get("jms_destination")).to eql(destination)
+          end
+
+          send_message # should not log the ECS warning again
+        end
+
       end
+
     end
 
     context 'when the message is a bytes message' do
