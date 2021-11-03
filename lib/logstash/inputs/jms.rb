@@ -137,7 +137,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # If this setting is omitted, data gets stored at the root (top level) of the event.
   # The target is only relevant while decoding data into a new event.
   #
-  # NOTE: this is only relevant for map messages, byte[] and string use the codec!
+  # NOTE: this is only relevant for map messages; byte[] and string use the codec!
   config :target, :validate => :field_reference
 
   config :headers_target, :validate => :field_reference # ECS default: [@metadata][input][jms][headers]
