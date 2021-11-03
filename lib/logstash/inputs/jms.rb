@@ -156,12 +156,9 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   def initialize(*params)
     super
 
-    unless original_params.include?('headers_target')
-      @headers_target = ecs_select[disabled: nil, v1: '[@metadata][input][jms][headers]']
-    end
-
-    unless original_params.include?('properties_target')
-      @properties_target = ecs_select[disabled: nil, v1: '[@metadata][input][jms][properties]']
+    if ecs_compatibility != :disabled # set ECS target defaults
+      @headers_target = '[@metadata][input][jms][headers]' unless original_params.include?('headers_target')
+      @properties_target = '[@metadata][input][jms][properties]' unless original_params.include?('properties_target')
     end
 
     @headers_setter = event_setter_for(@headers_target)
