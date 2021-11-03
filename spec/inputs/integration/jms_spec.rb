@@ -278,7 +278,7 @@ describe LogStash::Inputs::Jms, :integration => true do
                       'pub_sub' => pub_sub,
                       'interval' => 2}}
 
-  let(:input) { described_class.new(config) }
+  subject(:input) { described_class.new(config) }
 
   before :each do
     allow(input).to receive(:jms_config_from_yaml) do |yaml_file, section|
