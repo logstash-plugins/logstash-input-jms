@@ -35,7 +35,7 @@ JMS configurations can be done either entirely in the Logstash configuration fil
 
 ==== Compatibility with the Elastic Common Schema (ECS)
 
-JMS data is application specific, thus making fields compliant with the Elastic Common Schema depends on the use-case.
+JMS data is application specific. ECS compliance for fields depends on the use case.
 The plugin includes sensible defaults that change based on <<plugins-{type}s-{plugin}-ecs_compatibility,ECS compatibility mode>>.
 See <<plugins-{type}s-{plugin}-headers_target>>, <<plugins-{type}s-{plugin}-properties_target>> and <<plugins-{type}s-{plugin}-target>>.
 
