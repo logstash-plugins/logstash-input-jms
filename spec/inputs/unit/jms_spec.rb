@@ -1,8 +1,9 @@
 require_relative '../spec_helper'
 require 'logstash/inputs/jms'
+require 'logstash/plugin_mixins/ecs_compatibility_support/spec_helper'
 require 'securerandom'
 
-describe "inputs/jms" do
+describe LogStash::Inputs::Jms do
   let (:queue_name) {SecureRandom.hex(8)}
   let (:jms_config) {{'destination' => queue_name}}
 
@@ -260,5 +261,51 @@ describe "inputs/jms" do
       expect { subject.register }.to raise_error LogStash::ConfigurationError,
                                                  /Both `include_headers => true` and `include_header => false` options are specified/i
     end
+  end
+
+  context 'targets', :ecs_compatibility_support do
+
+    ecs_compatibility_matrix(:disabled, :v1, :v8) do |ecs_select|
+
+      let (:jms_config) do
+        super().merge(
+            'include_body' => false,
+            'include_headers' => true, 'headers_target' => '@metadata',
+            'include_properties' => true, 'properties_target' => '[@metadata]'
+        )
+      end
+
+      let(:jms_timestamp) { 1 }
+
+      let(:jms_message_double) do
+        message = double('jms-message-stub')
+        allow(message).to receive(:jms_timestamp).and_return(jms_timestamp)
+        allow(message).to receive(:attributes).and_return(
+            jms_message_id: 'id1', jms_timestamp: jms_timestamp, jms_destination: nil, jms_expiration: nil
+        )
+        allow(message).to receive(:properties).and_return(:foo => 'bar', 'the-baz' => 42)
+        message
+      end
+
+      before(:each) do
+        allow_any_instance_of(described_class).to receive(:ecs_compatibility).and_return(ecs_compatibility)
+
+        plugin.register
+        plugin.queue_event(jms_message_double, queue = [])
+        @event = queue.first
+      end
+
+      it 'sets headers into meta-data' do
+        expect( @event.get('[@metadata][jms_timestamp]') ).to eql jms_timestamp
+        expect( @event.get('[@metadata][jms_message_id]') ).to_not be nil
+      end
+
+      it 'sets properties as meta-data' do
+        expect( @event.get('[@metadata][foo]') ).to eql 'bar'
+        expect( @event.get('[@metadata][the-baz]') ).to eql 42
+      end
+
+    end
+
   end
 end

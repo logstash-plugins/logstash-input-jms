@@ -404,11 +404,16 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
   private
 
+  def normalize_field_ref(target)
+    # so we can later event.set("#{target}[#{name}]", ...)
+    target.match?(/\A[^\[\]]+\z/) ? "[#{target}]" : target
+  end
+
   def event_setter_for(target)
     if target.nil? || target.empty?
       TOP_LEVEL_EVENT_SETTER
     else
-      TargetEventSetter.new(target)
+      TargetEventSetter.new normalize_field_ref(target)
     end
   end
 
@@ -422,7 +427,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     end
 
     def call(event, data)
-      event.set(@target, data)
+      data.each { |key, val| event.set("#{@target}[#{key}]", val) }
     end
 
   end
