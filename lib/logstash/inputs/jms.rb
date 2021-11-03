@@ -42,7 +42,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # You can tell the input plugin which parts should be included in the event produced by Logstash
   #
   # Include JMS Message Header Field values in the event
-  config :include_header, :validate => :boolean, :default => false, :deprecated => "Set 'include_headers => ...' instead"
+  config :include_header, :validate => :boolean, :deprecated => "Set 'include_headers => ...' instead"
   config :include_headers, :validate => :boolean, :default => true
   # Include JMS Message Properties Field values in the event
   config :include_properties, :validate => :boolean, :default => true
