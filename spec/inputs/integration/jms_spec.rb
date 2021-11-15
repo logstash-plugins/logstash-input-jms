@@ -226,8 +226,6 @@ shared_examples_for "a JMS input" do
               expect(event.include?("jms_delivery_mode_sym")).to be true
             end
 
-            pp event.to_hash_with_metadata
-
             # properties
             if ecs_compatibility?
               expect(event.include?('this')).to be false
