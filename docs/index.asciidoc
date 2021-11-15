@@ -564,7 +564,22 @@ A JMS message has three parts:
 
 You can tell the input plugin which parts should be included in the event produced by Logstash.
 
-Include JMS Message Header Field values in the event.
+Include standard JMS message header field values in the event.
+Example headers:
+[source,ruby]
+-----
+    {
+        "jms_message_id" => "ID:amqhost-39547-1636977297920-71:1:1:1:1",
+        "jms_timestamp" => 1636977329102,
+        "jms_expiration" => 0,
+        "jms_delivery_mode" => "persistent",
+        "jms_redelivered" => false,
+        "jms_destination" => "topic://41ad5342149901ad",
+        "jms_priority" => 4,
+        "jms_type" => "sample",
+        "jms_correlation_id" => "28d975cb-14ff-4285-841e-05ef1e0a7ab2"
+    }
+-----
 
 [id="plugins-{type}s-{plugin}-include_properties"]
 ===== `include_properties`
