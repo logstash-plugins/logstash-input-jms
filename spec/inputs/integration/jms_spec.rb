@@ -218,10 +218,15 @@ shared_examples_for "a JMS input" do
               expect(event.include?('jms_destination')).to be false
               expect(event.get('[@metadata][input][jms][headers][jms_timestamp]')).to be_a Integer
               expect(event.get('[@metadata][input][jms][headers][jms_destination]')).to_not be nil
+              expect(event.include?("[@metadata][input][jms][headers][jms_delivery_mode_sym]")).to be false
+              expect(event.include?("[@metadata][input][jms][headers][jms_delivery_mode]")).to be true
             else
               expect(event.get('jms_timestamp')).to be_a Integer
               expect(event.get('jms_destination')).to_not be nil
+              expect(event.include?("jms_delivery_mode_sym")).to be true
             end
+
+            pp event.to_hash_with_metadata
 
             # properties
             if ecs_compatibility?
@@ -265,8 +270,11 @@ shared_examples_for "a JMS input" do
 
           if ecs_compatibility?
             expect(event.get('[@metadata][input][jms][headers][jms_destination]')).to eql(destination)
+            expect(event.get('[@metadata][input][jms][headers][jms_delivery_mode]')).to eql 'persistent'
+            expect(event.include?('[@metadata][input][jms][headers][jms_delivery_mode_sym]')).to be false
           else
             expect(event.get("jms_destination")).to eql(destination)
+            expect(event.get("jms_delivery_mode_sym")).to eql 'persistent'
           end
 
           send_message # should not log the ECS warning again

@@ -164,6 +164,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
     @headers_setter = event_setter_for(@headers_target)
     @properties_setter = event_setter_for(@properties_target)
+
+    @headers_mapper = ecs_compatibility == :disabled ? LegacyHeadersMapper::INSTANCE : HeadersMapper::INSTANCE
   end
 
   def register
@@ -314,9 +316,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
       end
 
       if @include_headers
-        # JMS gem gives us dasherized jms_xxx attribute names e.g.
-        #   jms_message_id, jms_destination, jms_delivery_mode_sym
-        headers = to_string_keyed_hash(msg.attributes)
+        headers = map_headers(msg)
         @skip_headers.each { |key| headers.delete(key) }
         @headers_setter.call(event, headers)
       end
@@ -449,5 +449,69 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
   end
   private_constant :TargetEventSetter
+
+  def map_headers(msg)
+    @headers_mapper.call(msg)
+  end
+
+  # Maps JMS headers names
+  # (similar to JMS gem's Message#attributes extension)
+  class HeadersMapper
+
+    # @param msg [javax.jms.Message]
+    # @return [Hash]
+    def call(msg)
+      map = {
+        'jms_message_id' => msg.getJMSMessageID, # String
+        'jms_correlation_id' => msg.getJMSCorrelationID, # String
+        'jms_timestamp' => msg.getJMSTimestamp, # long
+        'jms_delivery_time' => msg.getJMSDeliveryTime, # long
+        'jms_expiration' => msg.getJMSExpiration, # long
+        'jms_priority' => msg.getJMSPriority, # int (0-9)
+        'jms_type' => msg.getJMSType, # String
+        'jms_redelivered' => msg.getJMSRedelivered, # boolean
+      }
+
+      delivery_mode = jms_delivery_mode(msg)
+      map['jms_delivery_mode'] = delivery_mode unless delivery_mode.nil?
+
+      destination = msg.getJMSDestination # javax.jms.Destination
+      map['jms_destination'] = destination.to_string unless destination.nil?
+
+      reply_to = msg.getJMSReplyTo # javax.jms.Destination
+      map['jms_reply_to'] = reply_to.to_string unless reply_to.nil?
+
+      map
+    end
+
+    private
+
+    def jms_delivery_mode(msg)
+      case msg.getJMSDeliveryMode
+      when javax.jms.DeliveryMode::PERSISTENT
+        'persistent'
+      when javax.jms.DeliveryMode::NON_PERSISTENT
+        'non_persistent'
+      else
+        nil
+      end
+    end
+
+    INSTANCE = self.new
+
+  end
+
+  # For plugin compatibility due the use of JMS gem's Message#attributes.
+  class LegacyHeadersMapper < HeadersMapper
+
+    def call(msg)
+      map = super(msg)
+      map['jms_delivery_mode_sym'] = jms_delivery_mode(msg)
+      map
+    end
+
+    INSTANCE = self.new
+
+  end
 
 end # class LogStash::Inputs::Jms

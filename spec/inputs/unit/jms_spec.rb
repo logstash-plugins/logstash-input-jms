@@ -280,8 +280,8 @@ describe LogStash::Inputs::Jms do
       let(:jms_message_double) do
         message = double('jms-message-stub')
         allow(message).to receive(:jms_timestamp).and_return(jms_timestamp)
-        allow(message).to receive(:attributes).and_return(
-            jms_message_id: 'id1', jms_timestamp: jms_timestamp, jms_destination: nil, jms_expiration: nil
+        allow_any_instance_of(described_class).to receive(:map_headers).and_return(
+            'jms_message_id' => 'id1', 'jms_timestamp' => jms_timestamp, 'jms_expiration' => nil
         )
         allow(message).to receive(:properties).and_return(:foo => 'bar', 'the-baz' => 42)
         message
@@ -292,6 +292,7 @@ describe LogStash::Inputs::Jms do
 
         plugin.register
         plugin.queue_event(jms_message_double, queue = [])
+        expect(queue.size).to eql 1
         @event = queue.first
       end
 
