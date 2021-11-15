@@ -465,7 +465,6 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
         'jms_message_id' => msg.getJMSMessageID, # String
         'jms_correlation_id' => msg.getJMSCorrelationID, # String
         'jms_timestamp' => msg.getJMSTimestamp, # long
-        'jms_delivery_time' => msg.getJMSDeliveryTime, # long
         'jms_expiration' => msg.getJMSExpiration, # long
         'jms_priority' => msg.getJMSPriority, # int (0-9)
         'jms_type' => msg.getJMSType, # String
