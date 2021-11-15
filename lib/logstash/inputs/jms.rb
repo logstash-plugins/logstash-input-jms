@@ -463,13 +463,15 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     def call(msg)
       map = {
         'jms_message_id' => msg.getJMSMessageID, # String
-        'jms_correlation_id' => msg.getJMSCorrelationID, # String
         'jms_timestamp' => msg.getJMSTimestamp, # long
         'jms_expiration' => msg.getJMSExpiration, # long
         'jms_priority' => msg.getJMSPriority, # int (0-9)
         'jms_type' => msg.getJMSType, # String
         'jms_redelivered' => msg.getJMSRedelivered, # boolean
       }
+
+      correlation_id = msg.getJMSCorrelationID # String
+      map['jms_correlation_id'] = correlation_id unless correlation_id.nil?
 
       delivery_mode = jms_delivery_mode(msg)
       map['jms_delivery_mode'] = delivery_mode unless delivery_mode.nil?
