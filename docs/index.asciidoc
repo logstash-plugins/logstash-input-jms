@@ -33,6 +33,7 @@ JMS configurations can be done either entirely in the Logstash configuration fil
   configurations, should also use the combination of yaml file and Logstash configuration.
 
 
+[id="plugins-{type}s-{plugin}-ecs"]
 ==== Compatibility with the Elastic Common Schema (ECS)
 
 JMS data is application specific. ECS compliance for fields depends on the use case.
