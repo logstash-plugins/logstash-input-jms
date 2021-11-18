@@ -272,7 +272,7 @@ shared_examples_for "a JMS input" do
             expect(event.include?('[@metadata][input][jms][headers][jms_delivery_mode_sym]')).to be false
           else
             expect(event.get("jms_destination")).to eql(destination)
-            expect(event.get("jms_delivery_mode_sym")).to eql 'persistent'
+            expect(event.get("jms_delivery_mode_sym")).to eql :persistent
           end
 
           send_message # should not log the ECS warning again

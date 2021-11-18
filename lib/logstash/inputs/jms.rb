@@ -507,7 +507,8 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
     def call(msg)
       map = super(msg)
-      map['jms_delivery_mode_sym'] = jms_delivery_mode(msg)
+      delivery_mode = jms_delivery_mode(msg)
+      map['jms_delivery_mode_sym'] = delivery_mode ? delivery_mode.to_sym : nil
       map
     end
 
