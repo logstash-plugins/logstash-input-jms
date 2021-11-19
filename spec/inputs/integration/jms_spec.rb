@@ -1,10 +1,7 @@
 require_relative '../spec_helper'
 require 'logstash/inputs/jms'
-require 'jms'
-require 'json'
+require 'logstash/plugin_mixins/ecs_compatibility_support/spec_helper'
 require 'securerandom'
-
-
 
 shared_examples_for "a JMS input" do
   context 'when inputting messages' do
@@ -15,7 +12,7 @@ shared_examples_for "a JMS input" do
       let(:message) { "Hello There" }
 
       context 'when properties are skipped' do
-        let (:jms_config) { super().merge({'skip_properties' => ['this', 'that']})}
+        let (:config) { super().merge({'skip_properties' => ['this', 'that']})}
 
         it 'should skip the specified property and process other properties, headers and the message' do
           send_message do |session|
@@ -25,7 +22,7 @@ shared_examples_for "a JMS input" do
             msg.set_string_property('the_other', 'the_other_prop')
             msg
           end
-          expect(queue.first.get('message')).to eql (message)
+          expect(queue.first.get('message')).to eql(message)
           expect(queue.first.get('jms_destination')).to_not be_nil
           expect(queue.first.get('jms_timestamp')).to_not be_nil
           expect(queue.first.get('this')).to be_nil
@@ -35,7 +32,7 @@ shared_examples_for "a JMS input" do
       end
 
       context 'when using message selectors' do
-        let (:jms_config) { super().merge({'selector' => selector }) }
+        let (:config) { super().merge({'selector' => selector }) }
 
         context 'with multiple selector query parameter' do
           let (:selector) { "this = 3 OR this = 4" }
@@ -47,7 +44,7 @@ shared_examples_for "a JMS input" do
               msg.set_int_property('this', 4)
               msg
             end
-            expect(queue.first.get('message')).to eql (message)
+            expect(queue.first.get('message')).to eql(message)
             expect(queue.first.get('this')).to eql(4)
             expect(queue.first.get('that')).to eql('that_prop')
           end
@@ -73,7 +70,7 @@ shared_examples_for "a JMS input" do
               msg.set_int_property('this', 3)
               msg
             end
-            expect(queue.first.get('message')).to eql (message)
+            expect(queue.first.get('message')).to eql(message)
             expect(queue.first.get('this')).to eql(3)
             expect(queue.first.get('that')).to eql('that_prop')
           end
@@ -126,7 +123,7 @@ shared_examples_for "a JMS input" do
               msg.set_string_property('that', 'that_prop')
               msg
             end
-            expect(queue.first.get('message')).to eql (message)
+            expect(queue.first.get('message')).to eql(message)
             expect(queue.first.get('this')).to eql('this_prop')
             expect(queue.first.get('that')).to eql('that_prop')
           end
@@ -145,7 +142,8 @@ shared_examples_for "a JMS input" do
       end
 
       context 'when headers are skipped' do
-        let (:jms_config) { super().merge({'skip_headers' => ['jms_destination', 'jms_reply_to']})}
+        let (:config) { super().merge('skip_headers' => ['jms_destination', 'jms_reply_to']) }
+
         it 'should skip the specified header and process other headers, properties and the message' do
           send_message do |session|
             msg = session.message(message)
@@ -155,7 +153,7 @@ shared_examples_for "a JMS input" do
             msg.set_string_property('the_other', 'the_other_prop')
             msg
           end
-          expect(queue.first.get('message')).to eql (message)
+          expect(queue.first.get('message')).to eql(message)
           expect(queue.first.get('jms_destination')).to be_nil
           expect(queue.first.get('jms_timestamp')).to_not be_nil
           expect(queue.first.get('this')).to eq('this_prop')
@@ -164,33 +162,124 @@ shared_examples_for "a JMS input" do
         end
       end
 
-      context 'when neither header nor property is skipped ' do
-        it 'should process properties, headers and the message' do
+      context 'when include_headers => false' do
+        let (:config) { super().merge('include_headers' => 'false') }
+
+        it 'should skip all headers' do
           send_message do |session|
             msg = session.message(message)
-            msg.set_string_property('this', 'this_prop')
-            msg.set_string_property('that', 'that_prop')
-            msg.set_string_property('the_other', 'the_other_prop')
+            msg.reply_to = session.create_destination(:topic_name => SecureRandom.hex(8))
+            msg.set_string_property('some', 'property')
             msg
           end
-          expect(queue.first.get('message')).to eql (message)
-          expect(queue.first.get('jms_timestamp')).to_not be_nil
-          expect(queue.first.get('jms_destination')).to_not be_nil
-          expect(queue.first.get('this')).to eq('this_prop')
-          expect(queue.first.get('that')).to eq('that_prop')
-          expect(queue.first.get('the_other')).to eq('the_other_prop')
+          event = queue.first.to_hash_with_metadata
+          expect( event.keys.find { |name| name.start_with?('jms_') } ).to be nil
+        end
+      end
+
+      context 'when include_header => false (deprecated)' do
+        let (:config) { super().merge('include_header' => 'false') }
+
+        it 'should skip all headers' do
+          send_message do |session|
+            msg = session.message(message)
+            msg.reply_to = session.create_destination(:topic_name => SecureRandom.hex(8))
+            msg.set_string_property('some', 'property')
+            msg
+          end
+          event = queue.first.to_hash_with_metadata
+          expect( event.keys.find { |name| name.start_with?('jms_') } ).to be nil
+        end
+      end
+
+      context 'when neither header nor property is skipped', :ecs_compatibility_support do
+        ecs_compatibility_matrix(:disabled, :v1, :v8) do |ecs_select|
+
+          let(:ecs_compatibility?) { ecs_select.active_mode != :disabled }
+
+          let (:config) { super().merge('ecs_compatibility' => ecs_select.active_mode) }
+
+          it 'should process properties, headers and the message' do
+            send_message do |session|
+              msg = session.message(message)
+              msg.set_string_property('this', 'this_prop')
+              msg.set_int_property('camelCase', 42)
+              msg.set_boolean_property('JMSFlag', true)
+              msg
+            end
+
+            event = queue.first
+
+            expect(event.get('message')).to eql(message)
+
+            # headers
+            if ecs_compatibility?
+              expect(event.include?('jms_timestamp')).to be false
+              expect(event.include?('jms_destination')).to be false
+              expect(event.get('[@metadata][input][jms][headers][jms_timestamp]')).to be_a Integer
+              expect(event.get('[@metadata][input][jms][headers][jms_destination]')).to_not be nil
+              expect(event.include?("[@metadata][input][jms][headers][jms_delivery_mode_sym]")).to be false
+              expect(event.include?("[@metadata][input][jms][headers][jms_delivery_mode]")).to be true
+            else
+              expect(event.get('jms_timestamp')).to be_a Integer
+              expect(event.get('jms_destination')).to_not be nil
+              expect(event.include?("jms_delivery_mode_sym")).to be true
+            end
+
+            # properties
+            if ecs_compatibility?
+              expect(event.include?('this')).to be false
+              expect(event.get('[@metadata][input][jms][properties][this]')).to eq 'this_prop'
+              expect(event.get('[@metadata][input][jms][properties][camelCase]')).to eq 42
+              expect(event.get('[@metadata][input][jms][properties][JMSFlag]')).to be true
+            else
+              expect(event.get('this')).to eq 'this_prop'
+              expect(event.get('camelCase')).to eq 42
+              expect(event.get('JMSFlag')).to be true
+            end
+          end
+
         end
       end
     end
 
-    context 'when the message is map message' do
-      let(:message) { {:one => 1} }
-      it 'should read the message' do
-        send_message
-        expect(queue.size).to eql 1
-        expect(queue.first.get('one')).to eql (1)
-        expect(queue.first.get("jms_destination")).to eql(destination)
+    context 'when the message is map message', :ecs_compatibility_support do
+
+      ecs_compatibility_matrix(:disabled, :v1, :v8) do |ecs_select|
+
+        let(:ecs_compatibility?) { ecs_select.active_mode != :disabled }
+
+        let (:config) { super().merge('ecs_compatibility' => ecs_select.active_mode) }
+
+        let(:message) { {:one => 1} }
+
+        before do
+          if ecs_compatibility?
+            expect(subject.logger).to receive(:info).once.with /ECS compatibility is enabled but `target` option was not specified/i
+          end
+        end
+
+        it 'should read the message' do
+          send_message
+
+          expect(queue.size).to eql 1
+          event = queue.first
+          expect(event.get('one')).to eql 1
+
+          if ecs_compatibility?
+            expect(event.get('[@metadata][input][jms][headers][jms_destination]')).to eql(destination)
+            expect(event.get('[@metadata][input][jms][headers][jms_delivery_mode]')).to eql 'persistent'
+            expect(event.include?('[@metadata][input][jms][headers][jms_delivery_mode_sym]')).to be false
+          else
+            expect(event.get("jms_destination")).to eql(destination)
+            expect(event.get("jms_delivery_mode_sym")).to eql :persistent
+          end
+
+          send_message # should not log the ECS warning again
+        end
+
       end
+
     end
 
     context 'when the message is a bytes message' do
@@ -203,16 +292,25 @@ shared_examples_for "a JMS input" do
           jms_message
         end
         expect(queue.size).to eql 1
-        expect(queue.first.get('message')).to eql ('hello world')
+        expect(queue.first.get('message')).to eql 'hello world'
         expect(queue.first.get("jms_destination")).to eql(destination)
       end
     end
   end
 end
 
-describe "input/jms", :integration => true do
+describe LogStash::Inputs::Jms, :integration => true do
   let (:message) { "hello World" }
   let (:queue_name) { SecureRandom.hex(8)}
+
+  let (:yaml_section) { 'activemq' }
+  let (:config) {{'yaml_file' => fixture_path("jms.yml"),
+                      'yaml_section' => yaml_section,
+                      'destination' => queue_name,
+                      'pub_sub' => pub_sub,
+                      'interval' => 2}}
+
+  subject(:input) { described_class.new(config) }
 
   before :each do
     allow(input).to receive(:jms_config_from_yaml) do |yaml_file, section|
@@ -221,14 +319,6 @@ describe "input/jms", :integration => true do
       settings
     end
   end
-
-  let (:yaml_section) { 'activemq' }
-  let (:jms_config) {{'yaml_file' => fixture_path("jms.yml"),
-                      'yaml_section' => yaml_section,
-                      'destination' => queue_name,
-                      'pub_sub' => pub_sub,
-                      'interval' => 2}}
-  let(:input) { LogStash::Plugin.lookup("input", "jms").new(jms_config) }
 
   after :each do
     input.close unless input.nil?
@@ -241,7 +331,7 @@ describe "input/jms", :integration => true do
     end
 
     context 'with pub_sub true and durable subscriber' do
-      let (:jms_config) { super().merge({'durable_subscriber' => true,
+      let (:config) { super().merge({'durable_subscriber' => true,
                            'durable_subscriber_client_id' => SecureRandom.hex(8),
                            'durable_subscriber_name' => SecureRandom.hex(8) } ) }
 
@@ -258,8 +348,8 @@ describe "input/jms", :integration => true do
 
   context 'with tls', :tls => true do
     let (:yaml_section) { 'activemq_tls' }
-    let (:jms_config) { super().merge({"keystore" => fixture_path("keystore.jks"), "keystore_password" => "changeit",
-                                     "truststore" => fixture_path("keystore.jks"), "truststore_password" => "changeit"})}
+    let (:config) { super().merge({"keystore" => fixture_path("keystore.jks"), "keystore_password" => "changeit",
+                                   "truststore" => fixture_path("keystore.jks"), "truststore_password" => "changeit"})}
 
     context 'with pub_sub true' do
       let (:pub_sub) { true }
@@ -267,7 +357,7 @@ describe "input/jms", :integration => true do
     end
 
     context 'with pub_sub true and durable subscriber' do
-      let (:jms_config) { super().merge({'durable_subscriber' => true,
+      let (:config) { super().merge({'durable_subscriber' => true,
                            'durable_subscriber_client_id' => SecureRandom.hex(8),
                            'durable_subscriber_name' => SecureRandom.hex(8) } ) }
 
