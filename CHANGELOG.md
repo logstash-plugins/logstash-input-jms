@@ -2,6 +2,7 @@
  - Feat: event_factory support + targets to aid ECS [#49](https://github.com/logstash-plugins/logstash-input-jms/pull/49)
  - Fix: when configured to add JMS headers to the event, headers whose value is not set no longer result in nil entries on the event
  - Fix: when adding the `jms_reply_to` header to an event, a string representation is set instead of an opaque object.
+
 ## 3.1.2
  - Docs: Added additional troubleshooting information [#38](https://github.com/logstash-plugins/logstash-input-jms/pull/38)
 
