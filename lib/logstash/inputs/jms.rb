@@ -84,7 +84,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   # If pub-sub (topic) style should be used.
   config :pub_sub, :validate => :boolean, :default => false
 
-  # Durable subscriber settings.
+  # Durable message_consumer settings.
   # By default the `durable_subscriber_name` will be set to the topic, and `durable_subscriber_client_id` will be set
   # to 'Logstash'
   config :durable_subscriber, :validate => :boolean, :default => false
@@ -273,9 +273,9 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
       params = {:timeout => @timeout * 1000, :selector => @selector}
       subscriber = subscriber(session, params)
       until stop?
-        # This will read from the queue/topic until :timeout is breached, or messages are available whichever comes
-        # first.
-        subscriber.each({:timeout => @interval * 1000}) do |message|
+        # read from the queue/topic until :timeout is reached, or a message is available
+        # (whichever comes first)
+        do_receive_message(subscriber, timeout: @interval * 1000) do |message|
           queue_event(message, output_queue)
           break if stop?
         end
@@ -333,6 +333,28 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     rescue => e # parse or event creation error
       @logger.error("Failed to create event", :message => msg, :exception => e,
                     :backtrace => e.backtrace)
+    end
+  end
+
+  # Loop through messages received and yield them.
+  #
+  # NOTE: a simplified replacement for JMS::MessageConsumer#each and #get (extensions).
+  #
+  # @param message_consumer [javax.jms.MessageConsumer]
+  # @param timeout in milliseconds
+  def do_receive_message(message_consumer, timeout: 0)
+    # Receive messages according to timeout
+    while true
+      case timeout
+      when  0 # Return immediately if no message is available
+        message = message_consumer.receiveNoWait()
+      when -1 # Wait forever
+        message = message_consumer.receive()
+      else # Wait for x milli-seconds for a message to be received from the broker
+        message = message_consumer.receive(timeout)
+      end
+      break unless message
+      yield message
     end
   end
 
