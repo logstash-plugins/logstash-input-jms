@@ -32,6 +32,5 @@ def send_message(&block)
   end
   input.run(queue)
 
-  destination = "#{pub_sub ? 'topic' : 'queue'}://#{queue_name}"
   tt.join(3)
 end
