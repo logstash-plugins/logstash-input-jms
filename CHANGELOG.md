@@ -1,5 +1,6 @@
 ## 3.2.1
- - Fix: improve compatibility with MessageConsumer implementations [#51](https://github.com/logstash-plugins/logstash-input-jms/pull/51)
+ - Fix: improve compatibility with MessageConsumer implementations [#51](https://github.com/logstash-plugins/logstash-input-jms/pull/51),
+   such as IBM MQ.
 
 ## 3.2.0
  - Feat: event_factory support + targets to aid ECS [#49](https://github.com/logstash-plugins/logstash-input-jms/pull/49)
