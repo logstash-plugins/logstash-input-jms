@@ -23,11 +23,11 @@ shared_examples_for "a JMS input" do
             msg
           end
           expect(queue.first.get('message')).to eql(message)
-          expect(queue.first.get('jms_destination')).to_not be_nil
-          expect(queue.first.get('jms_timestamp')).to_not be_nil
-          expect(queue.first.get('this')).to be_nil
-          expect(queue.first.get('that')).to be_nil
-          expect(queue.first.get('the_other')).to eql('the_other_prop')
+          expect(queue.first).to have_header('jms_destination')
+          expect(queue.first).to have_header('jms_timestamp')
+          expect(queue.first).not_to have_property('this')
+          expect(queue.first).not_to have_property('this')
+          expect(queue.first).to have_property_value('the_other', 'the_other_prop')
         end
       end
 
@@ -45,8 +45,8 @@ shared_examples_for "a JMS input" do
               msg
             end
             expect(queue.first.get('message')).to eql(message)
-            expect(queue.first.get('this')).to eql(4)
-            expect(queue.first.get('that')).to eql('that_prop')
+            expect(queue.first).to have_property_value('this', 4)
+            expect(queue.first).to have_property_value('that', 'that_prop')
           end
 
           it 'does not process messages that do not conform to the message selector' do
@@ -71,8 +71,8 @@ shared_examples_for "a JMS input" do
               msg
             end
             expect(queue.first.get('message')).to eql(message)
-            expect(queue.first.get('this')).to eql(3)
-            expect(queue.first.get('that')).to eql('that_prop')
+            expect(queue.first).to have_property_value('this', 3)
+            expect(queue.first).to have_property_value('that', 'that_prop')
           end
 
           it 'does not process messages that do not conform to the message selector' do
@@ -97,8 +97,8 @@ shared_examples_for "a JMS input" do
               msg
             end
             expect(queue.first.get('message')).to eql(message)
-            expect(queue.first.get('this')).to be_within(0.001).of(3.1)
-            expect(queue.first.get('that')).to eql('that_prop')
+            expect(get_property_value(queue.first, 'this')).to be_within(0.001).of(3.1)
+            expect(queue.first).to have_property_value('that', 'that_prop')
           end
 
           it 'does not process messages that do not conform to the message selector' do
@@ -124,8 +124,8 @@ shared_examples_for "a JMS input" do
               msg
             end
             expect(queue.first.get('message')).to eql(message)
-            expect(queue.first.get('this')).to eql('this_prop')
-            expect(queue.first.get('that')).to eql('that_prop')
+            expect(queue.first).to have_property_value('this', 'this_prop')
+            expect(queue.first).to have_property_value('that', 'that_prop')
           end
 
           it 'does not process messages that do not conform to the message selector' do
@@ -154,11 +154,11 @@ shared_examples_for "a JMS input" do
             msg
           end
           expect(queue.first.get('message')).to eql(message)
-          expect(queue.first.get('jms_destination')).to be_nil
-          expect(queue.first.get('jms_timestamp')).to_not be_nil
-          expect(queue.first.get('this')).to eq('this_prop')
-          expect(queue.first.get('that')).to eq('that_prop')
-          expect(queue.first.get('the_other')).to eq('the_other_prop')
+          expect(queue.first).not_to have_header('jms_destination')
+          expect(queue.first).to have_header('jms_timestamp')
+          expect(queue.first).to have_property_value('this', 'this_prop')
+          expect(queue.first).to have_property_value('that', 'that_prop')
+          expect(queue.first).to have_property_value('the_other', 'the_other_prop')
         end
       end
 
@@ -293,7 +293,7 @@ shared_examples_for "a JMS input" do
         end
         expect(queue.size).to eql 1
         expect(queue.first.get('message')).to eql 'hello world'
-        expect(queue.first.get("jms_destination")).to eql(destination)
+        expect(queue.first).to have_header_value("jms_destination", destination)
       end
     end
   end
