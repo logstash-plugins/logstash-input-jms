@@ -34,3 +34,40 @@ def send_message(&block)
 
   tt.join(3)
 end
+
+
+def get_value(type, actual, name)
+  actual.get(name) || actual.get("[@metadata][input][jms][#{type}][#{name}]")
+end
+
+def get_header_value(actual, name)
+  get_value('headers', actual, name)
+end
+
+def get_property_value(actual, name)
+  get_value('properties', actual, name)
+end
+
+RSpec::Matchers.define :have_header do |expected|
+  match do |actual|
+    get_header_value(actual, expected)
+  end
+end
+
+RSpec::Matchers.define :have_property do |expected|
+  match do |actual|
+    get_property_value(actual, expected)
+  end
+end
+
+RSpec::Matchers.define :have_header_value do |header, expected|
+  match do |actual|
+    expected == get_header_value(actual, header)
+  end
+end
+
+RSpec::Matchers.define :have_property_value do |property, expected|
+  match do |actual|
+    expected == get_property_value(actual, property)
+  end
+end
