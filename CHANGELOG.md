@@ -1,5 +1,7 @@
-## unreleased
- - Fix: Fix test failures due to ECS compatibility default changes in `8.x` of logstash [#53](https://github.com/logstash-plugins/logstash-input-jms/pull/53)
+## 3.2.1
+ - Fix: improve compatibility with MessageConsumer implementations [#51](https://github.com/logstash-plugins/logstash-input-jms/pull/51),
+   such as IBM MQ.
+ - Test: Fix test failures due to ECS compatibility default changes in `8.x` of logstash [#53](https://github.com/logstash-plugins/logstash-input-jms/pull/53)
 
 ## 3.2.0
  - Feat: event_factory support + targets to aid ECS [#49](https://github.com/logstash-plugins/logstash-input-jms/pull/49)
