@@ -299,9 +299,9 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
   def queue_event(msg, output_queue)
     begin
       if @include_body
-        if msg.java_kind_of?(JMS::MapMessage)
+        if msg.kind_of?(JMS::MapMessage)
           event = process_map_message(msg)
-        elsif msg.java_kind_of?(JMS::TextMessage) || msg.java_kind_of?(JMS::BytesMessage)
+        elsif msg.kind_of?(JMS::TextMessage) || msg.kind_of?(JMS::BytesMessage)
           event = decode_message(msg)
         else
           @logger.error( "Unsupported message type #{msg.data.class.to_s}" )
