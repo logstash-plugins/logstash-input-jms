@@ -1,3 +1,7 @@
+## 3.2.2
+ - Fix: Remove usage of `java_kind_of?` to allow this plugin to be supported for versions of Logstash using jruby-9.3.x
+ [#54](https://github.com/logstash-plugins/logstash-input-jms/pull/54)
+
 ## 3.2.1
  - Fix: improve compatibility with MessageConsumer implementations [#51](https://github.com/logstash-plugins/logstash-input-jms/pull/51),
    such as IBM MQ.
