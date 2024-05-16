@@ -1,3 +1,6 @@
+## 3.3.0
+ - Added support for decoding multiple events from text or binary messages when using a codec that produces multiple events
+
 ## 3.2.2
  - Fix: Remove usage of `java_kind_of?` to allow this plugin to be supported for versions of Logstash using jruby-9.3.x
  [#54](https://github.com/logstash-plugins/logstash-input-jms/pull/54)

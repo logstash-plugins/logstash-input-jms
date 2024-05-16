@@ -241,6 +241,19 @@ shared_examples_for "a JMS input" do
 
         end
       end
+
+      context 'when using a multi-event codec' do
+        let(:config) { super().merge('codec' => 'line') }
+        let(:message) { 'one' + "\n" + 'two' + "\n" + 'three' }
+        it 'emits multiple events' do
+          send_message do |session|
+            session.message(message)
+          end
+          expect(queue.size).to eql 3
+          expect(queue.map { |e| e.get('message') }).to contain_exactly("one", "two", "three")
+          expect(queue).to all(have_header_value("jms_destination", destination))
+        end
+      end
     end
 
     context 'when the message is map message', :ecs_compatibility_support do
