@@ -276,7 +276,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
         # read from the queue/topic until :timeout is reached, or a message is available
         # (whichever comes first)
         do_receive_message(subscriber, timeout: @interval * 1000) do |message|
-          queue_event(message, output_queue)
+          queue_events(message, output_queue)
           break if stop?
         end
       end
@@ -296,20 +296,27 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
     end
   end # def run_consumer
 
-  def queue_event(msg, output_queue)
-    begin
-      if @include_body
-        if msg.kind_of?(JMS::MapMessage)
-          event = process_map_message(msg)
-        elsif msg.kind_of?(JMS::TextMessage) || msg.kind_of?(JMS::BytesMessage)
-          event = decode_message(msg)
-        else
-          @logger.error( "Unsupported message type #{msg.data.class.to_s}" )
-        end
+  def events(msg, &event_handler)
+    return enum_for(:events, msg).to_a unless block_given?
+
+    if @include_body
+      if msg.kind_of?(JMS::MapMessage)
+        return process_map_message(msg, &event_handler)
+      elsif msg.kind_of?(JMS::TextMessage) || msg.kind_of?(JMS::BytesMessage)
+        return process_string_message(msg, &event_handler)
+      else
+        @logger.error( "Unsupported message type #{msg.data.class.to_s}" )
       end
+    end
 
-      event ||= event_factory.new_event
+    yield event_factory.new_event
+  rescue => e
+    @logger.error("Failed to create event", :message => msg, :exception => e,
+                  :backtrace => e.backtrace)
+  end
 
+  def queue_events(msg, output_queue)
+    events(msg).map do |event|
       # Here, we can use the JMS Enqueue timestamp as the @timestamp
       if @use_jms_timestamp && msg.jms_timestamp
         event.set("@timestamp", LogStash::Timestamp.at(msg.jms_timestamp / 1000, (msg.jms_timestamp % 1000) * 1000))
@@ -327,12 +334,9 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
         @properties_setter.call(event, properties)
       end
 
-      decorate(event)
-      output_queue << event
-
-    rescue => e # parse or event creation error
-      @logger.error("Failed to create event", :message => msg, :exception => e,
-                    :backtrace => e.backtrace)
+      event
+    end.each do |ready_event|
+      output_queue << ready_event
     end
   end
 
@@ -365,9 +369,17 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
   # @param msg [JMS::MapMessage]
   # @return [LogStash::Event]
-  def process_map_message(msg)
+  def process_map_message(msg, &event_handler)
     data = to_string_keyed_hash(msg.data)
-    do_target_check_once_and_get_event_factory.new_event(data)
+    yield do_target_check_once_and_get_event_factory.new_event(data)
+  end
+
+  def process_string_message(msg, &event_handler)
+    text = msg.to_s # javax.jms.TextMessage#getText (e.g. JSON payload)
+    return event_factory.new_event if text.nil?
+
+    @codec.decode(text, &event_handler)
+    @codec.flush(&event_handler)
   end
 
   def do_target_check_once_and_get_event_factory

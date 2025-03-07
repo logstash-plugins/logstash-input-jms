@@ -291,7 +291,7 @@ describe LogStash::Inputs::Jms do
         allow_any_instance_of(described_class).to receive(:ecs_compatibility).and_return(ecs_compatibility)
 
         plugin.register
-        plugin.queue_event(jms_message_double, queue = [])
+        plugin.queue_events(jms_message_double, queue = [])
         expect(queue.size).to eql 1
         @event = queue.first
       end
