@@ -336,6 +336,7 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
 
       event
     end.each do |ready_event|
+      decorate(event)
       output_queue << ready_event
     end
   end
