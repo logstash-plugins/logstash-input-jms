@@ -5,7 +5,7 @@ env
 
 set -ex
 
-export ACTIVEMQ_VERSION=5.19.0
+export ACTIVEMQ_VERSION=5.15.16
 ./setup_broker.sh
 bundle install
 
