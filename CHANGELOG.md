@@ -1,5 +1,8 @@
+## 3.3.1
+ - Fixed a regression introduced in 3.3.0 where `add_field` is no longer enriching events.
+
 ## 3.3.0
- - Added support for decoding multiple events from text or binary messages when using a codec that produces multiple events
+ - Added support for decoding multiple events from text or binary messages when using a codec that produces multiple events [#56](https://github.com/logstash-plugins/logstash-input-jms/pull/56)
 
 ## 3.2.2
  - Fix: Remove usage of `java_kind_of?` to allow this plugin to be supported for versions of Logstash using jruby-9.3.x
