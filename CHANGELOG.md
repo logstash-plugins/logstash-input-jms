@@ -1,5 +1,5 @@
 ## 3.3.1
- - Fixed a regression introduced in 3.3.0 where `add_field` is no longer enriching events.
+ - Fixed a regression introduced in 3.3.0 where `add_field` is no longer enriching events [#59](https://github.com/logstash-plugins/logstash-input-jms/pull/59)
 
 ## 3.3.0
  - Added support for decoding multiple events from text or binary messages when using a codec that produces multiple events [#56](https://github.com/logstash-plugins/logstash-input-jms/pull/56)
