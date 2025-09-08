@@ -334,9 +334,9 @@ class LogStash::Inputs::Jms < LogStash::Inputs::Threadable
         @properties_setter.call(event, properties)
       end
 
+      decorate(event)
       event
     end.each do |ready_event|
-      decorate(event)
       output_queue << ready_event
     end
   end
