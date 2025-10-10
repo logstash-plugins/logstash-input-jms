@@ -309,4 +309,22 @@ describe LogStash::Inputs::Jms do
     end
 
   end
+
+  context "ensure add_field has been called" do
+    let(:jms_config) do
+      super().merge(
+        'include_body' => false,
+        'include_headers' => false,
+        'include_properties' => false,
+        'add_field' => { "[jms][extra]" => "something" }
+      )
+    end
+
+    it 'has decorated event' do
+      plugin.register
+      plugin.queue_events(double('jms-message-stub'), queue = [])
+      event = queue.first
+      expect(event.get("[jms][extra]")).to eq("something")
+    end
+  end
 end
