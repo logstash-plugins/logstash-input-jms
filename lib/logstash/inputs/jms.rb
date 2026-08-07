@@ -9,6 +9,13 @@ require 'logstash/plugin_mixins/ecs_compatibility_support/target_check'
 require 'logstash/plugin_mixins/event_support/event_factory_adapter'
 require 'logstash/plugin_mixins/validator_support/field_reference_validation_adapter'
 
+# Ruby 2.4 unified Fixnum/Bignum into Integer, and Ruby 3.2 (the JRuby shipped
+# with Logstash 9.4+) removed the old constants. The `jruby-jms` gem still
+# references Fixnum in its MapMessage handling, so alias the removed constants
+# back to Integer before `require "jms"` runs in #register.
+Fixnum = Integer unless defined?(Fixnum)
+Bignum = Integer unless defined?(Bignum)
+
 # Read events from a Jms Broker. Supports both Jms Queues and Topics.
 #
 # For more information about Jms, see <http://docs.oracle.com/javaee/6/tutorial/doc/bncdq.html>
