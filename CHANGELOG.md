@@ -1,3 +1,7 @@
+## 3.3.2
+  - Fix `NameError: uninitialized constant Fixnum` when reading a JMS MapMessage on Logstash 9.4+ [#63](https://github.com/logstash-plugins/logstash-input-jms/pull/63)
+    - The `jruby-jms` gem references the `Fixnum` constant, which Ruby removed in 3.2 (shipped by the JRuby in Logstash 9.4+). This raised a `NameError` while decoding a JMS MapMessage. Alias the removed `Fixnum`/`Bignum` constants to `Integer` before requiring `jms`.
+
 ## 3.3.1
  - Fixed a regression introduced in 3.3.0 where `add_field` is no longer enriching events [#59](https://github.com/logstash-plugins/logstash-input-jms/pull/59)
 
